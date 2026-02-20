@@ -4,6 +4,7 @@ import { useLayoutEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { Globe } from "./Globe"; // Ensure we can reference it if needed, though we use getObjectByName
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -79,6 +80,36 @@ export function SceneController() {
                 y: -2.2, // Bay mechanism extends
                 duration: 1
             }, "drop");
+        }
+
+        // Section 5: Global Operations - Show the Globe
+        const globeGroup = scene.getObjectByName("globeGroup");
+        const carrier = scene.getObjectByName("hull"); // or the whole carrier group
+
+        if (globeGroup) {
+            // Move Carrier up and away
+            tl.to(camera.position, {
+                y: 10,
+                z: 20,
+                duration: 2
+            }, "globe");
+
+            if (carrier) {
+                tl.to(carrier.position, {
+                    y: 20, // Fly out
+                    duration: 2
+                }, "globe");
+            }
+
+            // Bring Globe in
+            tl.to(globeGroup.position, {
+                y: 0,
+                duration: 2
+            }, "globe");
+            tl.to(globeGroup.scale, {
+                x: 1, y: 1, z: 1,
+                duration: 2
+            }, "globe");
         }
 
         return () => {

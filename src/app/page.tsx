@@ -1,88 +1,75 @@
 import HeroCanvas from "@/components/canvas/HeroCanvas";
+import { TelemetryMatrix } from "@/components/dom/TelemetryMatrix";
 
 export default function Home() {
   return (
-    <main className="relative w-full min-h-screen bg-black text-white selection:bg-accent selection:text-black">
+    <main className="relative w-full min-h-screen bg-transparent selection:bg-emerald-200 selection:text-emerald-900 text-slate-800">
       <HeroCanvas />
 
       {/* Overlay Content */}
       <div className="relative z-10 w-full pointer-events-none">
 
-        {/* SECTION 1: HERO */}
+        {/* SECTION 1: HERO - High-Tech Naturalism */}
         <section className="h-screen w-full flex flex-col items-center justify-center pointer-events-auto" data-scroll-section>
-          <div className="text-center space-y-4">
-            <h1 className="text-6xl md:text-8xl font-bold tracking-tighter mix-blend-difference">
+          <div className="text-center space-y-6">
+            <h1 className="text-6xl md:text-9xl font-bold tracking-tighter text-slate-900 opacity-90">
               PROJECT AETHER
             </h1>
-            <p className="text-xl text-secondary max-w-2xl mx-auto font-mono">
-              The Aerial Infrastructure Network
+            <p className="text-2xl md:text-3xl text-slate-600 max-w-3xl mx-auto font-light leading-relaxed">
+              Global Utility in Harmony with Nature.
             </p>
           </div>
         </section>
 
-        {/* SECTION 2: THE CONFLICT */}
-        <section className="h-screen w-full flex items-center justify-end px-20 pointer-events-auto relative overflow-hidden" data-scroll-section>
+        {/* SECTION 2: THE CONFLICT (Updating copy/style to V2) */}
+        <section className="h-screen w-full flex items-center justify-end px-6 md:px-20 pointer-events-auto relative overflow-hidden" data-scroll-section>
           {/* Background/Parallax Images */}
-          <div className="absolute top-1/2 left-10 -translate-y-1/2 w-[400px] h-[300px] opacity-60 z-[-1] transform -rotate-6">
-            <img src="/assets/construction_road.png" alt="Construction Road" className="w-full h-full object-cover grayscale contrast-125 rounded-sm" />
-          </div>
-          <div className="absolute bottom-10 left-1/4 w-[350px] h-[250px] opacity-60 z-[-1] transform rotate-3">
-            <img src="/assets/turbine_transport.png" alt="Turbine Transport" className="w-full h-full object-cover grayscale contrast-125 rounded-sm" />
+          <div className="absolute top-1/2 left-10 -translate-y-1/2 w-[500px] h-[400px] opacity-80 z-[-1] transform -rotate-3 rounded-2xl overflow-hidden shadow-2xl">
+            <img src="/assets/construction_road.png" alt="Traditional Infrastructure" className="w-full h-full object-cover grayscale opacity-50 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
           </div>
 
-          <div className="p-10 border-l border-white/20 bg-black/50 backdrop-blur-md max-w-lg z-10">
-            <h2 className="text-4xl font-bold mb-4 text-accent">The Terrain Tax</h2>
-            <p className="text-secondary mb-4">
-              The world builds infrastructure the hard way. Roads cost millions per mile.
-              Geography dictates progress. We are removing the bottleneck.
+          <div className="p-12 bg-white/80 backdrop-blur-xl border border-slate-200 shadow-xl rounded-2xl max-w-lg z-10">
+            <div className="text-emerald-600 font-mono text-sm mb-4 tracking-widest uppercase">The Bottleneck</div>
+            <h2 className="text-4xl font-bold mb-6 text-slate-900">Earth has Limits.<br />The Sky Does Not.</h2>
+            <p className="text-slate-600 text-lg leading-relaxed mb-6">
+              Traditional infrastructure scars the landscape. We spend trillions paving over nature to reach resources. Aether removes the road equation entirely.
             </p>
-            <div className="text-sm font-mono text-gray-500">
-               // COST_PER_MILE: $5M+ <br />
-               // TIME_TO_BUILD: 24 MONTHS
+            <div className="grid grid-cols-2 gap-4 text-sm font-mono text-slate-500 border-t border-slate-200 pt-6">
+              <div>
+                <span className="block text-slate-900 font-bold">COST / MILE</span>
+                $10,000,000+
+              </div>
+              <div>
+                <span className="block text-slate-900 font-bold">ECO IMPACT</span>
+                High (Deforestation)
+              </div>
             </div>
           </div>
         </section>
 
-        {/* SECTION 3: THE SYSTEM */}
-        <section className="h-screen w-full flex items-center justify-start px-20 pointer-events-auto" data-scroll-section>
-          <div className="p-10 border-r border-white/20 bg-black/50 backdrop-blur-md max-w-lg">
-            <h2 className="text-4xl font-bold mb-4 text-accent">Hybrid Architecture</h2>
-            <p className="text-secondary mb-4">
-              Hydrogen-Helium hull for free lift. Autonomous heavy-lift drones for precision.
-              The first logistics system that ignores gravity.
-            </p>
-            <ul className="text-sm font-mono text-gray-500 space-y-2">
-              <li>[+] BUOYANT_LIFT: 90%</li>
-              <li>[+] ENERGY_COST: NEAR_ZERO</li>
-            </ul>
-          </div>
-        </section>
+        {/* SECTION 3: TELEMETRY MATRIX (New V2 Component) */}
+        <div className="pointer-events-auto bg-white relative z-20">
+          <TelemetryMatrix />
+        </div>
 
-        {/* SECTION 4: THE DROP */}
-        <section className="h-screen w-full flex items-center justify-center pointer-events-auto" data-scroll-section>
-          <div className="text-center max-w-2xl">
-            <h2 className="text-5xl font-bold mb-6">Precision Delivered</h2>
-            <p className="text-xl text-secondary">
-              "Floating is free. Precision is engineered."
+        {/* SECTION 4: THE DROP / VERTICAL LOGISTICS */}
+        <section className="h-screen w-full flex items-center justify-center pointer-events-auto bg-gradient-to-b from-white to-blue-50" data-scroll-section>
+          <div className="text-center max-w-4xl px-6">
+            <div className="text-amber-500 font-mono text-sm mb-4 tracking-widest uppercase">Precision Delivery</div>
+            <h2 className="text-5xl md:text-7xl font-bold mb-8 text-slate-900">Vertical Logistics.</h2>
+            <p className="text-2xl text-slate-600 font-light">
+              From the stratosphere to the last meter. <br />
+              <strong className="font-semibold text-slate-900">No runway required.</strong>
             </p>
           </div>
         </section>
 
-        {/* SECTION 5: ECONOMICS */}
-        <section className="h-screen w-full flex items-center justify-center pointer-events-auto" data-scroll-section>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full px-10">
-            <div className="p-8 border border-white/10 bg-surface rounded-sm">
-              <div className="text-4xl font-bold text-accent mb-2">80%</div>
-              <div className="text-secondary">Lower Energy Cost</div>
-            </div>
-            <div className="p-8 border border-white/10 bg-surface rounded-sm">
-              <div className="text-4xl font-bold text-accent mb-2">$0</div>
-              <div className="text-secondary">Infrastructure CapEx</div>
-            </div>
-            <div className="p-8 border border-white/10 bg-surface rounded-sm">
-              <div className="text-4xl font-bold text-accent mb-2">100t</div>
-              <div className="text-secondary">Payload Capacity</div>
-            </div>
+        {/* SECTION 5: GLOBAL IMPACT / GLOBE PLACEHOLDER */}
+        <section className="h-screen w-full flex items-center justify-center pointer-events-auto bg-blue-50" data-scroll-section>
+          <div className="absolute top-20 left-0 w-full text-center z-10 px-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Next-Generation Global Heavy Infra Transportation Network</h2>
+            <p className="text-slate-500 font-mono text-sm tracking-widest uppercase">Real-time Operations</p>
           </div>
         </section>
       </div>

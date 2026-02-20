@@ -1,12 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050505;
-  --foreground: #e2e8f0;
-  --color-surface: #0a0b0d;
-  --color-primary: #e2e8f0;
-  --color-secondary: #8e9aaf;
-  --color-accent: #ffb347;
+  /* V2: High-Tech Naturalism Palette */
+  --background: #f8fafc;
+  /* Mist */
+  --foreground: #1e293b;
+  /* Deep Slate */
+  --color-surface: #ffffff;
+  /* Cloud White */
+  --color-primary: #1e293b;
+  /* Deep Slate */
+  --color-secondary: #64748b;
+  /* Slate-500 */
+  --color-accent: #166534;
+  /* Forest Green */
+  --color-highlight: #f59e0b;
+  /* Amber Sun */
 }
 
 @theme inline {
@@ -16,7 +25,8 @@
   --color-primary: var(--color-primary);
   --color-secondary: var(--color-secondary);
   --color-accent: var(--color-accent);
-  
+  --color-highlight: var(--color-highlight);
+
   --font-inter: var(--font-inter);
   --font-archivo: var(--font-archivo);
   --font-jetbrains-mono: var(--font-jetbrains-mono);
@@ -29,7 +39,12 @@ body {
   overflow-x: hidden;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-archivo), sans-serif;
 }
 
