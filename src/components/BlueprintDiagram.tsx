@@ -347,25 +347,27 @@ function PropellerNacelles() {
 function PropellerDisc() {
     const ref = useRef<THREE.Group>(null!);
     useFrame((_, delta) => {
-        if (ref.current) ref.current.rotation.z += delta * 8;
+        if (ref.current) ref.current.rotation.x += delta * 8;
     });
 
     return (
-        <group ref={ref} position={[0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            {[0, Math.PI / 3, -Math.PI / 3].map((rot, i) => (
-                <mesh key={i} rotation={[0, 0, rot]}>
-                    <planeGeometry args={[0.03, 0.35]} />
-                    <meshBasicMaterial color={AMBER} transparent opacity={0.3} side={THREE.DoubleSide} />
+        <group ref={ref} position={[0.3, 0, 0]}>
+            <group rotation={[0, Math.PI / 2, 0]}>
+                {[0, Math.PI / 3, -Math.PI / 3].map((rot, i) => (
+                    <mesh key={i} rotation={[0, 0, rot]}>
+                        <planeGeometry args={[0.03, 0.35]} />
+                        <meshBasicMaterial color={AMBER} transparent opacity={0.3} side={THREE.DoubleSide} />
+                    </mesh>
+                ))}
+                <mesh>
+                    <sphereGeometry args={[0.025, 8, 8]} />
+                    <meshBasicMaterial color={AMBER} transparent opacity={0.5} />
                 </mesh>
-            ))}
-            <mesh>
-                <sphereGeometry args={[0.025, 8, 8]} />
-                <meshBasicMaterial color={AMBER} transparent opacity={0.5} />
-            </mesh>
-            <mesh>
-                <ringGeometry args={[0.16, 0.18, 24]} />
-                <meshBasicMaterial color={AMBER_DIM} transparent opacity={0.1} side={THREE.DoubleSide} />
-            </mesh>
+                <mesh>
+                    <ringGeometry args={[0.16, 0.18, 24]} />
+                    <meshBasicMaterial color={AMBER_DIM} transparent opacity={0.1} side={THREE.DoubleSide} />
+                </mesh>
+            </group>
         </group>
     );
 }
@@ -532,63 +534,125 @@ function HullGlow() {
     );
 }
 
-/* ─── 3D Annotation labels (HTML overlays, hidden on mobile) ─── */
-function AnnotationLabels() {
-    const [isMobile, setIsMobile] = useState(false);
+/* ─── Annotation data ─── */
+const ANNOTATIONS = [
+    {
+        id: "length",
+        label: "LENGTH",
+        value: "260 M",
+        desc: "End-to-end measurement of the rigid composite hull, accommodating gas cells, cargo bays, and command systems.",
+        pos: [0, 1.5, 0] as [number, number, number],
+    },
+    {
+        id: "payload",
+        label: "MAX PAYLOAD",
+        value: "200 METRIC TONS",
+        desc: "Modular cradle system distributes load across the keel structure. Equivalent to 4 fully-loaded semi-trailers lifted simultaneously.",
+        pos: [-1.8, -1.2, 0.8] as [number, number, number],
+    },
+    {
+        id: "altitude",
+        label: "CRUISE ALTITUDE",
+        value: "3,000 – 6,000 M",
+        desc: "Operates above terrain obstacles and weather layers. Buoyancy-neutral cruise eliminates fuel burn during transit.",
+        pos: [-2.5, 0.6, 0.5] as [number, number, number],
+    },
+    {
+        id: "gas",
+        label: "BUOYANCY GAS",
+        value: "H₂/He HYBRID",
+        desc: "Inner cells use hydrogen for maximum lift; outer safety envelope filled with inert helium. Triple-redundant containment.",
+        pos: [1.5, 0.6, 0.5] as [number, number, number],
+    },
+    {
+        id: "propulsion",
+        label: "PROPULSION",
+        value: "SOLAR-ELECTRIC HYBRID",
+        desc: "Dorsally-mounted photovoltaic arrays feed brushless nacelle motors. Regenerative turbine mode during descent.",
+        pos: [2.4, -0.3, 1.0] as [number, number, number],
+    },
+    {
+        id: "drones",
+        label: "DRONE MODULES",
+        value: "8–12 AUTONOMOUS UNITS",
+        desc: "Heavy-lift quadrotor drones deploy from ventral bays for precision last-mile placement. Swarm-coordinated via mesh network.",
+        pos: [-0.3, -1.4, 0.5] as [number, number, number],
+    },
+];
 
-    useEffect(() => {
-        const check = () => setIsMobile(window.innerWidth < 768);
-        check();
-        window.addEventListener("resize", check);
-        return () => window.removeEventListener("resize", check);
-    }, []);
-
-    const annotations = [
-        { label: "LENGTH", value: "260 M", pos: [0, 1.7, 0] as [number, number, number] },
-        { label: "MAX PAYLOAD", value: "200 METRIC TONS", pos: [-1.8, -1.4, 0.8] as [number, number, number] },
-        { label: "CRUISE ALTITUDE", value: "3,000 - 6,000 M", pos: [-2.5, 0.8, 0.5] as [number, number, number] },
-        { label: "BUOYANCY GAS", value: "H₂/He HYBRID", pos: [1.5, 0.8, 0.5] as [number, number, number] },
-        { label: "PROPULSION", value: "SOLAR-ELECTRIC HYBRID", pos: [2.2, -0.5, 1.0] as [number, number, number] },
-        { label: "DRONE MODULES", value: "8-12 AUTONOMOUS UNITS", pos: [-0.3, -1.5, 0.5] as [number, number, number] },
-    ];
-
-    if (isMobile) return null;
-
+/* ─── Clickable hotspot markers in 3D space ─── */
+function HotspotMarkers({ selectedId, onSelect }: { selectedId: string | null; onSelect: (id: string | null) => void }) {
     return (
         <group>
-            {annotations.map((ann, i) => (
-                <Html
-                    key={i}
-                    position={ann.pos}
-                    center
-                    distanceFactor={8}
-                    style={{
-                        pointerEvents: "none",
-                        whiteSpace: "nowrap",
-                    }}
-                >
-                    <div className="flex flex-col items-center gap-0.5 opacity-70">
-                        <span
-                            className="font-mono font-bold tracking-[0.2em] uppercase"
-                            style={{ fontSize: "8px", color: "#6b7280" }}
-                        >
-                            {ann.label}
-                        </span>
-                        <span
-                            className="font-mono font-bold tracking-[0.15em]"
-                            style={{ fontSize: "10px", color: "#c48a20" }}
-                        >
-                            {ann.value}
-                        </span>
-                    </div>
-                </Html>
+            {ANNOTATIONS.map((ann) => (
+                <Hotspot
+                    key={ann.id}
+                    annotation={ann}
+                    isSelected={selectedId === ann.id}
+                    onSelect={onSelect}
+                />
             ))}
         </group>
     );
 }
 
+/* ─── Single hotspot with pulsing ring ─── */
+function Hotspot({ annotation, isSelected, onSelect }: {
+    annotation: typeof ANNOTATIONS[0];
+    isSelected: boolean;
+    onSelect: (id: string | null) => void;
+}) {
+    const ringRef = useRef<THREE.Mesh>(null!);
+
+    useFrame(({ clock }) => {
+        if (!ringRef.current) return;
+        const pulse = 1 + Math.sin(clock.elapsedTime * 3 + ANNOTATIONS.indexOf(annotation) * 1.2) * 0.15;
+        ringRef.current.scale.set(pulse, pulse, 1);
+    });
+
+    return (
+        <group position={annotation.pos}>
+            <Html center style={{ pointerEvents: "auto", cursor: "pointer" }}>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(isSelected ? null : annotation.id);
+                    }}
+                    className="group relative flex items-center justify-center rounded-full force-circle"
+                    style={{ width: 24, height: 24 }}
+                    aria-label={`View ${annotation.label} details`}
+                >
+                    {/* Outer pulsing ring */}
+                    <div
+                        className={`absolute inset-0 rounded-full force-circle border transition-all duration-300 ${isSelected
+                            ? "border-amber bg-amber/20 scale-100"
+                            : "border-amber/40 bg-transparent scale-100 group-hover:border-amber group-hover:bg-amber/10"
+                            }`}
+                        style={{ animation: isSelected ? "none" : "pulse 2s ease-in-out infinite" }}
+                    />
+                    {/* Center dot */}
+                    <div
+                        className={`relative w-2.5 h-2.5 rounded-full force-circle transition-all duration-300 ${isSelected ? "bg-amber shadow-[0_0_8px_rgba(196,138,32,0.6)]" : "bg-amber/70 group-hover:bg-amber"
+                            }`}
+                    />
+                </button>
+            </Html>
+            {/* 3D ring for visual flair */}
+            <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.08, 0.12, 32]} />
+                <meshBasicMaterial
+                    color={AMBER}
+                    transparent
+                    opacity={isSelected ? 0.5 : 0.15}
+                    side={THREE.DoubleSide}
+                />
+            </mesh>
+        </group>
+    );
+}
+
 /* ─── Main airship model composition ─── */
-function BlueprintAirship() {
+function BlueprintAirship({ selectedId, onSelect }: { selectedId: string | null; onSelect: (id: string | null) => void }) {
     const groupRef = useRef<THREE.Group>(null!);
 
     useFrame(({ clock }) => {
@@ -615,7 +679,7 @@ function BlueprintAirship() {
             <DimensionLines />
             <ScanBeam />
             <AtmosphereParticles />
-            <AnnotationLabels />
+            <HotspotMarkers selectedId={selectedId} onSelect={onSelect} />
         </group>
     );
 }
@@ -623,7 +687,11 @@ function BlueprintAirship() {
 /* ─── Exported component ─── */
 export function BlueprintDiagram() {
     const [mounted, setMounted] = useState(false);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
     useEffect(() => setMounted(true), []);
+
+    const selectedAnnotation = ANNOTATIONS.find((a) => a.id === selectedId) || null;
 
     if (!mounted) {
         return (
@@ -656,15 +724,59 @@ export function BlueprintDiagram() {
             </div>
             <div className="absolute bottom-3 right-8 z-10 pointer-events-none hidden md:block">
                 <span className="text-[9px] tracking-[0.2em] text-cold-steel/40 font-mono">
-                    DRAG TO ROTATE · SCROLL TO ZOOM
+                    {selectedAnnotation ? "CLICK HOTSPOT TO INSPECT" : "CLICK HOTSPOTS TO EXPLORE · DRAG TO ROTATE"}
                 </span>
             </div>
 
             {/* Mobile hint */}
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none md:hidden">
                 <span className="text-[9px] tracking-[0.2em] text-cold-steel/40 font-mono">
-                    DRAG TO ROTATE · PINCH TO ZOOM
+                    {selectedAnnotation ? "TAP HOTSPOT TO INSPECT" : "TAP HOTSPOTS · DRAG TO ROTATE"}
                 </span>
+            </div>
+
+            {/* ─── Selected component detail card ─── */}
+            <div
+                className={`absolute top-3 right-8 z-20 transition-all duration-300 ${selectedAnnotation
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 -translate-y-2 pointer-events-none"
+                    }`}
+            >
+                {selectedAnnotation && (
+                    <div className="bg-deep-space/90 backdrop-blur-md border border-amber/30 p-4 md:p-5 max-w-[280px] md:max-w-xs shadow-lg">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] tracking-[0.3em] text-amber font-bold uppercase font-mono">
+                                {selectedAnnotation.label}
+                            </span>
+                            <button
+                                onClick={() => setSelectedId(null)}
+                                className="text-cold-steel/50 hover:text-amber transition-colors text-xs font-mono tracking-wider"
+                                aria-label="Close detail"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="text-base md:text-lg font-black tracking-tight text-amber mb-2 font-sans">
+                            {selectedAnnotation.value}
+                        </div>
+                        <p className="text-[11px] md:text-xs text-cold-steel/80 font-mono leading-relaxed tracking-wide">
+                            {selectedAnnotation.desc}
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            {/* ─── Hotspot legend (when nothing selected) ─── */}
+            <div
+                className={`absolute top-3 right-8 z-20 transition-all duration-300 hidden md:block ${!selectedAnnotation ? "opacity-100" : "opacity-0 pointer-events-none"
+                    }`}
+            >
+                <div className="flex items-center gap-2 bg-deep-space/60 backdrop-blur-sm border border-border-subtle px-3 py-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber/70 animate-pulse" />
+                    <span className="text-[9px] tracking-[0.2em] text-cold-steel/60 font-mono">
+                        {ANNOTATIONS.length} INSPECTABLE COMPONENTS
+                    </span>
+                </div>
             </div>
 
             <Canvas
@@ -677,7 +789,7 @@ export function BlueprintDiagram() {
                 <directionalLight position={[5, 3, 5]} intensity={0.5} color={0xffeedd} />
                 <directionalLight position={[-3, -1, -3]} intensity={0.2} color={0x8090b0} />
 
-                <BlueprintAirship />
+                <BlueprintAirship selectedId={selectedId} onSelect={setSelectedId} />
 
                 <OrbitControls
                     enablePan={false}

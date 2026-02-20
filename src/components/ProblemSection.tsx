@@ -64,7 +64,7 @@ export function ProblemSection() {
                 />
                 <div className="absolute inset-0 blueprint-grid opacity-50" />
 
-                <div className="max-w-5xl mx-auto relative z-10">
+                <div className="max-w-7xl mx-auto relative z-10">
 
                     {/* Overline */}
                     <div className="mb-8 flex items-center gap-4">

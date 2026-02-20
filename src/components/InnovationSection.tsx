@@ -54,7 +54,7 @@ export function InnovationSection() {
                     overlay="both"
                 />
                 <div className="absolute inset-0 blueprint-grid" />
-                <div className="max-w-7xl mx-auto relative z-10">
+                <div className="max-w-5xl mx-auto relative z-10">
 
                     <div className="mb-16">
                         <span className="text-[11px] tracking-[0.4em] text-amber font-bold uppercase font-mono">{t(translations.innovation.systemOverline)}</span>

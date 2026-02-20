@@ -48,6 +48,10 @@
   border-color: var(--border-color-default);
 }
 
+.force-circle {
+  border-radius: 50% !important;
+}
+
 body {
   background: var(--color-deep-space);
   color: var(--color-titanium);
