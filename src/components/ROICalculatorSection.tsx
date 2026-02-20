@@ -33,12 +33,12 @@ export function ROICalculatorSection() {
 
                 {/* Header */}
                 <div className="mb-20">
-                    <span className="text-[11px] tracking-[0.4em] text-amber font-bold uppercase font-mono">ANALYSIS</span>
+                    <span className="text-[11px] tracking-[0.4em] text-amber font-bold uppercase font-mono">ECONOMICS</span>
                     <h2 className="text-4xl md:text-5xl font-black tracking-tighter mt-4 mb-6">
-                        True Cost of <span className="text-amber">Delivery</span>
+                        The Math Changes <span className="text-amber">Everything</span>
                     </h2>
                     <p className="text-cold-steel font-mono tracking-wide max-w-2xl leading-relaxed">
-                        Calculate the financial and environmental impact of heavy lift operations across different terrains.
+                        When you remove roads, runways, and ports from the equation, the economics of heavy-lift delivery transform entirely.
                     </p>
                 </div>
 

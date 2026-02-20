@@ -1,9 +1,9 @@
 import { Navbar } from "@/components/Navbar";
 import { HeroSection } from "@/components/HeroSection";
 import { ProblemSection } from "@/components/ProblemSection";
+import { NetworkMapSection } from "@/components/NetworkMapSection";
 import { InnovationTeaser } from "@/components/InnovationTeaser";
 import { ROICalculatorSection } from "@/components/ROICalculatorSection";
-import { NetworkMapSection } from "@/components/NetworkMapSection";
 
 export default function Home() {
   return (
@@ -11,9 +11,9 @@ export default function Home() {
       <Navbar />
       <HeroSection />
       <ProblemSection />
+      <NetworkMapSection />
       <InnovationTeaser />
       <ROICalculatorSection />
-      <NetworkMapSection />
     </main>
   );
 }

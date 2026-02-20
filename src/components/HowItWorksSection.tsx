@@ -3,13 +3,30 @@ import { SectionBackground } from "./SectionBackground";
 
 export function HowItWorksSection() {
     const steps = [
-        { num: "01", title: "LOAD CARGO", desc: "Heavy infrastructure payload — wind turbine blades, transformer units, bridge segments — is secured into a modular cradle system at the staging facility." },
-        { num: "02", title: "SKY CARRIER LIFTS", desc: "The hydrogen-helium hybrid lift system achieves buoyancy. The Sky Carrier ascends effortlessly — 200+ tons rising on physics alone. No runway, no fuel burn for lift." },
-        { num: "03", title: "CRUISE", desc: "Energy-efficient propulsion drives the carrier across continents. Solar-electric hybrid motors maintain course while the Orchestration Platform plots real-time weather-optimal routes." },
-        { num: "04", title: "HOVER ABOVE DESTINATION", desc: "Arriving at the deployment zone, the Sky Carrier enters precision hover. Dynamic ballast control maintains position within ±0.5m — even in 40-knot crosswinds." },
-        { num: "05", title: "DRONE MODULES DETACH", desc: "8-12 autonomous Deployment Modules release from the carrier's belly. Each unit carries stabilization thrusters and force-feedback winches for centimeter-level control." },
-        { num: "06", title: "PRECISION PLACEMENT", desc: "The drone swarm descends in coordinated formation, lowering the payload onto prepared foundations. Sub-centimeter accuracy via LIDAR terrain mapping and real-time AI adjustments." },
-        { num: "07", title: "REDOCK & DEPART", desc: "Drones autonomously return to the carrier. The Sky Carrier re-balances ballast and departs for the next mission. Total ground-contact footprint: zero." },
+        {
+            num: "01",
+            title: "LOAD & LIFT",
+            desc: "Heavy infrastructure payload is secured into a modular cradle at the staging facility. The hydrogen-helium hybrid lift system achieves buoyancy — 200+ tons rising on physics alone. No runway, no fuel burn for lift.",
+            spec: "H₂/He HYBRID LIFT · ZERO-FUEL ASCENT",
+        },
+        {
+            num: "02",
+            title: "CRUISE",
+            desc: "Solar-electric hybrid motors drive the carrier across continents while the Orchestration AI plots real-time weather-optimal routes. Intercontinental range with near-zero emissions.",
+            spec: "SOLAR-ELECTRIC · INTERCONTINENTAL RANGE",
+        },
+        {
+            num: "03",
+            title: "HOVER & DEPLOY",
+            desc: "At the deployment zone, the Sky Carrier enters precision hover. Dynamic ballast holds position within ±0.5m. 8-12 autonomous drone modules detach, descending in coordinated formation with the payload.",
+            spec: "DYNAMIC BALLAST · ±0.5M TOLERANCE",
+        },
+        {
+            num: "04",
+            title: "PLACE & DEPART",
+            desc: "The drone swarm lowers cargo onto prepared foundations with sub-centimeter accuracy via LIDAR terrain mapping. Drones autonomously redock. The carrier departs. Total ground-contact footprint: zero.",
+            spec: "SUB-CM ACCURACY · ZERO GROUND FOOTPRINT",
+        },
     ];
 
     return (
@@ -30,7 +47,7 @@ export function HowItWorksSection() {
                         How It <span className="text-amber">Works</span>
                     </h2>
                     <p className="text-cold-steel font-mono tracking-wide max-w-2xl leading-relaxed">
-                        Seven precision-engineered phases from origin to placement. Zero ground infrastructure required.
+                        Four precision-engineered phases from origin to placement. Zero ground infrastructure required.
                     </p>
                 </div>
 
@@ -39,27 +56,30 @@ export function HowItWorksSection() {
                     <BlueprintDiagram />
                 </div>
 
-                {/* Steps */}
+                {/* Combined 4-Phase Steps */}
                 <div className="relative">
-                    {/* Vertical line */}
+                    {/* Vertical connector line */}
                     <div className="absolute left-[28px] top-0 bottom-0 w-[1px] bg-border-subtle hidden md:block" />
 
                     <div className="space-y-0">
                         {steps.map((step, idx) => (
-                            <div key={idx} className="flex flex-col md:flex-row gap-6 md:gap-8 group py-8 border-b border-border-subtle/50 last:border-b-0">
+                            <div key={idx} className="flex flex-col md:flex-row gap-6 md:gap-8 group py-10 border-b border-border-subtle/50 last:border-b-0">
                                 {/* Number */}
                                 <div className="flex-shrink-0 relative">
-                                    <div className="w-12 h-12 md:w-14 md:h-14 border border-amber/30 flex items-center justify-center bg-deep-space group-hover:bg-amber/10 group-hover:border-amber transition-all">
-                                        <span className="text-amber font-black text-base md:text-lg font-sans">{step.num}</span>
+                                    <div className="w-14 h-14 border border-amber/30 flex items-center justify-center bg-deep-space group-hover:bg-amber/10 group-hover:border-amber transition-all">
+                                        <span className="text-amber font-black text-lg font-sans">{step.num}</span>
                                     </div>
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-1 pt-0 md:pt-1">
-                                    <h3 className="text-lg md:text-xl font-black tracking-wider mb-3 group-hover:text-amber transition-colors">{step.title}</h3>
-                                    <p className="text-cold-steel font-mono text-xs md:text-sm leading-[1.8] tracking-wide max-w-2xl">
+                                    <h3 className="text-xl font-black tracking-wider mb-3 group-hover:text-amber transition-colors">{step.title}</h3>
+                                    <p className="text-cold-steel font-mono text-sm leading-[1.8] tracking-wide max-w-2xl mb-4">
                                         {step.desc}
                                     </p>
+                                    <div className="text-[10px] text-amber font-bold tracking-widest uppercase">
+                                        {step.spec}
+                                    </div>
                                 </div>
                             </div>
                         ))}

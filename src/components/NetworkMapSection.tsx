@@ -320,24 +320,24 @@ export function NetworkMapSection() {
     );
 
     return (
-        <section className="w-full py-32 px-6 relative">
+        <section className="w-full py-24 md:py-32 px-6 relative">
             <SectionBackground
                 src="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1200&q=60&auto=format"
                 alt="Deep space nebula"
-                opacity={2}
+                opacity={3}
                 overlay="both"
             />
-            <div className="absolute inset-0 blueprint-grid" />
+            <div className="absolute inset-0 blueprint-grid opacity-30" />
 
             <div className="max-w-7xl mx-auto relative z-10 flex flex-col items-center">
 
-                <div className="text-center mb-16 w-full">
-                    <span className="text-[11px] tracking-[0.4em] text-amber font-bold uppercase font-mono">GLOBAL OPERATIONS</span>
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tighter mt-4 mb-6">
-                        Bridging the <span className="text-amber">Final Mile</span>
+                <div className="text-center mb-12 md:mb-16 w-full">
+                    <span className="text-[11px] tracking-[0.4em] text-amber font-bold uppercase font-mono">WHERE ROADS END</span>
+                    <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter mt-4 mb-6 leading-[0.95]">
+                        The World&apos;s <span className="text-amber">Hardest</span><br className="hidden md:block" /> Routes
                     </h2>
-                    <p className="text-cold-steel font-mono tracking-wide max-w-2xl mx-auto leading-relaxed">
-                        Sky Carriers bypass terrestrial bottlenecks to deliver vital infrastructure on the world&apos;s most challenging routes.
+                    <p className="text-cold-steel font-mono tracking-wide max-w-2xl mx-auto leading-relaxed text-sm md:text-base">
+                        These are the corridors where conventional logistics fail. Every arc represents a real-world infrastructure bottleneck that only buoyant heavy lift can solve.
                     </p>
                 </div>
 
@@ -372,7 +372,7 @@ export function NetworkMapSection() {
                     </div>
 
                     {/* Globe */}
-                    <div className="flex-1 h-[500px] md:h-[700px] relative overflow-hidden border border-border-subtle border-l-0">
+                    <div className="flex-1 h-[600px] md:h-[800px] relative overflow-hidden border border-border-subtle lg:border-l-0">
 
                         {/* Active sortie overlay */}
                         <div className="absolute right-4 top-4 z-20 bg-deep-space/90 backdrop-blur p-3 hidden md:flex flex-col gap-2 font-mono border border-border-subtle">
