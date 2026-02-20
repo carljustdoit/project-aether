@@ -1,778 +1,695 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useMemo, useEffect, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Html } from "@react-three/drei";
+import * as THREE from "three";
+
+/* ─── Color constants (light-theme-friendly) ─── */
+const AMBER = new THREE.Color(0xc48a20);
+const AMBER_DIM = new THREE.Color(0xc48a20).multiplyScalar(0.4);
+const AMBER_BRIGHT = new THREE.Color(0xe5a830);
+const HULL_COLOR = new THREE.Color(0x2a3a50);
+const GAS_CELL_COLOR = new THREE.Color(0xc48a20);
+const STEEL = new THREE.Color(0x6b7280);
+
+const ThreeLine = "line" as any;
+
+/* ─── Hull solid envelope ─── */
+function HullEnvelope() {
+    const geo = useMemo(() => {
+        const shape = new THREE.SphereGeometry(1, 64, 32);
+        shape.scale(3.2, 1, 1);
+        return shape;
+    }, []);
 
-/* ─── Types ─── */
-interface Annotation {
-    label: string;
-    x: number;
-    y: number;
-    value?: string;
-    align?: "left" | "right";
-}
-
-interface HotspotData {
-    id: string;
-    label: string;
-    desc: string;
-    cx: number;
-    cy: number;
-    radius: number;
-}
-
-/* ─── Palette ─── */
-const AMBER = "#D4A853";
-const AMBER_DIM = "rgba(212,168,83,0.25)";
-const AMBER_FILL = "rgba(212,168,83,0.06)";
-const STEEL = "rgba(122,133,148,0.5)";
-const BG = "#0C1117";
-const HULL_FILL = "rgba(20,30,42,0.7)";
-const GAS_CELL = "rgba(212,168,83,0.04)";
-
-/* ─── Annotation Data ─── */
-const annotations: Annotation[] = [
-    { label: "LENGTH", x: 0.5, y: 0.08, value: "800 M" },
-    { label: "WINGSPAN", x: 0.82, y: 0.22, value: "200 M", align: "right" },
-    { label: "MAX PAYLOAD", x: 0.15, y: 0.72, value: "150 METRIC TONS", align: "left" },
-    { label: "BUOYANCY GAS", x: 0.7, y: 0.35, value: "H₂/He HYBRID", align: "right" },
-    { label: "CRUISE ALTITUDE", x: 0.18, y: 0.22, value: "3,000 - 6,000 M", align: "left" },
-    { label: "PROPULSION", x: 0.85, y: 0.52, value: "SOLAR-ELECTRIC HYBRID", align: "right" },
-];
-
-const hotspots: HotspotData[] = [
-    { id: "hull", label: "COMPOSITE HULL", desc: "Multi-layer alloy-composite envelope with UV-resistant outer skin. Internal helium cells provide redundant lift chambers.", cx: 0.5, cy: 0.35, radius: 0.06 },
-    { id: "gondola", label: "COMMAND GONDOLA", desc: "Pressurized crew module with 360° situational awareness. AI-assisted flight systems with triple-redundant avionics.", cx: 0.42, cy: 0.62, radius: 0.04 },
-    { id: "cargo", label: "CARGO BAY", desc: "Modular cradle system accommodates infrastructure payloads up to 150 metric tons. Quick-release mechanism for drone deployment modules.", cx: 0.55, cy: 0.56, radius: 0.04 },
-    { id: "tail", label: "TAIL ASSEMBLY", desc: "Four cruciform stabilizer fins with active trim control. Provides yaw/pitch authority in crosswinds up to 40 knots.", cx: 0.12, cy: 0.35, radius: 0.04 },
-    { id: "nacelle", label: "PROPULSION NACELLE", desc: "Vectoring electric motors fed by solar array and onboard fuel cells. Each nacelle provides 8,000 N of continuous thrust.", cx: 0.72, cy: 0.52, radius: 0.035 },
-    { id: "drones", label: "DRONE MODULES", desc: "8-12 autonomous heavy-lift deployment drones. Force-feedback winches enable sub-centimeter placement accuracy during descent.", cx: 0.55, cy: 0.72, radius: 0.04 },
-];
-
-/* ─── Helper: Draw ellipse hull profile ─── */
-function getEllipsePoint(cx: number, cy: number, rx: number, ry: number, angle: number): [number, number] {
-    return [cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)];
-}
-
-/* ─── Canvas Drawing Functions ─── */
-
-function drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number) {
-    const spacing = 40;
-    ctx.strokeStyle = "rgba(212,168,83,0.03)";
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < w; x += spacing) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-    }
-    for (let y = 0; y < h; y += spacing) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(212,168,83,0.05)";
-    ctx.lineWidth = 0.8;
-    for (let x = 0; x < w; x += 200) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-    }
-    for (let y = 0; y < h; y += 200) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-    }
-}
-
-function drawAirship(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
-    const cx = w * 0.5;
-    const cy = h * 0.38;
-    const hullW = w * 0.72;
-    const hullH = h * 0.28;
-    const hullRX = hullW / 2;
-    const hullRY = hullH / 2;
-
-    ctx.save();
-
-    // ─── Hull fill (dark with subtle gradient) ───
-    const hullGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, hullRX);
-    hullGrad.addColorStop(0, "rgba(25,38,55,0.5)");
-    hullGrad.addColorStop(0.7, "rgba(18,28,40,0.4)");
-    hullGrad.addColorStop(1, "rgba(12,17,23,0.2)");
-    ctx.fillStyle = hullGrad;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, hullRX, hullRY, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ─── Internal gas cells ───
-    const cellCount = 5;
-    for (let i = 0; i < cellCount; i++) {
-        const t = (i / (cellCount - 1)) * 2 - 1; // -1 to 1
-        const cellCX = cx + t * hullRX * 0.65;
-        const cellRX = hullRX * 0.14;
-        const envelopeR = Math.sqrt(Math.max(0, 1 - (t * 0.65) ** 2));
-        const cellRY = hullRY * 0.55 * envelopeR;
-
-        const pulse = 0.4 + Math.sin(time * 0.8 + i * 1.3) * 0.15;
-        ctx.fillStyle = `rgba(212,168,83,${0.03 * pulse})`;
-        ctx.beginPath();
-        ctx.ellipse(cellCX, cy, cellRX, cellRY, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = `rgba(212,168,83,${0.08 * pulse})`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.ellipse(cellCX, cy, cellRX, cellRY, 0, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-
-    // ─── Hull outline (main envelope) ───
-    ctx.strokeStyle = AMBER;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, hullRX, hullRY, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // ─── Inner structural ellipse ───
-    ctx.strokeStyle = AMBER_DIM;
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, hullRX * 0.88, hullRY * 0.85, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // ─── Panel seam lines (horizontal) ───
-    const seamCount = 5;
-    for (let i = 0; i < seamCount; i++) {
-        const yFrac = (i + 1) / (seamCount + 1);
-        const yOff = (yFrac - 0.5) * hullH * 0.9;
-
-        ctx.strokeStyle = `rgba(212,168,83,${0.06 + yFrac * 0.04})`;
-        ctx.lineWidth = 0.4;
-        ctx.beginPath();
-
-        for (let j = 0; j <= 80; j++) {
-            const t = (j / 80) * 2 - 1;
-            const xCurve = cx + t * hullRX * 0.98;
-            const envelope = Math.sqrt(Math.max(0, 1 - t * t));
-            const yCurve = cy + yOff * envelope;
-            if (Math.abs(yOff) < hullRY * envelope) {
-                if (j === 0) ctx.moveTo(xCurve, yCurve);
-                else ctx.lineTo(xCurve, yCurve);
-            }
-        }
-        ctx.stroke();
-    }
-
-    // ─── Structural ribs (vertical) ───
-    const ribCount = 14;
-    for (let i = 0; i < ribCount; i++) {
-        const t = (i / (ribCount - 1)) * 2 - 1;
-        const xPos = cx + t * hullRX * 0.95;
-        const ribH = Math.sqrt(Math.max(0, 1 - t * t)) * hullRY;
-
-        const pulse = Math.sin(time * 2 + i * 0.5) * 0.02 + 0.98;
-
-        ctx.strokeStyle = `rgba(212,168,83,${0.12 + Math.abs(t) * 0.08})`;
-        ctx.lineWidth = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(xPos, cy - ribH * pulse);
-        ctx.lineTo(xPos, cy + ribH * pulse);
-        ctx.stroke();
-    }
-
-    // ─── Longitudinal stringers ───
-    const stringerCount = 8;
-    for (let i = 0; i < stringerCount; i++) {
-        const frac = (i + 1) / (stringerCount + 1);
-        const yOff = (frac - 0.5) * hullH * 0.92;
-
-        ctx.strokeStyle = `rgba(212,168,83,${0.06 + frac * 0.04})`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-
-        for (let j = 0; j <= 80; j++) {
-            const t = (j / 80) * 2 - 1;
-            const xCurve = cx + t * hullRX * 0.98;
-            const envelope = Math.sqrt(Math.max(0, 1 - t * t));
-            const yCurve = cy + yOff * envelope;
-            if (j === 0) ctx.moveTo(xCurve, yCurve);
-            else ctx.lineTo(xCurve, yCurve);
-        }
-        ctx.stroke();
-    }
-
-    // ─── Solar panel array (top of hull) ───
-    const panelCount = 8;
-    for (let i = 0; i < panelCount; i++) {
-        const t = (i / (panelCount - 1)) * 1.4 - 0.7;
-        const px = cx + t * hullRX;
-        const envelopeTop = Math.sqrt(Math.max(0, 1 - (t / 0.98) ** 2)) * hullRY;
-        const py = cy - envelopeTop + 2;
-        const pw = hullRX * 0.12;
-        const ph = 6;
-
-        ctx.fillStyle = "rgba(26,42,69,0.5)";
-        ctx.fillRect(px - pw / 2, py - ph / 2, pw, ph);
-        ctx.strokeStyle = "rgba(212,168,83,0.15)";
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(px - pw / 2, py - ph / 2, pw, ph);
-        // Grid lines on panel
-        ctx.strokeStyle = "rgba(212,168,83,0.08)";
-        ctx.lineWidth = 0.3;
-        ctx.beginPath();
-        ctx.moveTo(px, py - ph / 2);
-        ctx.lineTo(px, py + ph / 2);
-        ctx.stroke();
-    }
-
-    // ─── Gondola ───
-    const gondolaX = cx + hullW * 0.02;
-    const gondolaY = cy + hullH * 0.62;
-    const gW = hullW * 0.16;
-    const gH = hullH * 0.38;
-
-    // Struts (4 of them)
-    ctx.strokeStyle = AMBER_DIM;
-    ctx.lineWidth = 1;
-    [-0.04, -0.015, 0.015, 0.04].forEach(xOff => {
-        ctx.beginPath();
-        ctx.moveTo(gondolaX + xOff * hullW, cy + hullH * 0.46);
-        ctx.lineTo(gondolaX + xOff * hullW, gondolaY - gH / 2);
-        ctx.stroke();
-    });
-
-    // Gondola body fill
-    ctx.fillStyle = "rgba(18,26,38,0.7)";
-    ctx.fillRect(gondolaX - gW / 2, gondolaY - gH / 2, gW, gH);
-
-    // Gondola body outline
-    ctx.strokeStyle = AMBER;
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.rect(gondolaX - gW / 2, gondolaY - gH / 2, gW, gH);
-    ctx.stroke();
-
-    // Window strip (2 rows)
-    ctx.fillStyle = "rgba(212,168,83,0.08)";
-    ctx.fillRect(gondolaX - gW / 2 + 4, gondolaY - gH / 4 - 2, gW - 8, 4);
-    ctx.strokeStyle = "rgba(212,168,83,0.2)";
-    ctx.lineWidth = 0.6;
-    ctx.strokeRect(gondolaX - gW / 2 + 4, gondolaY - gH / 4 - 2, gW - 8, 4);
-
-    // Gondola internal lines
-    ctx.strokeStyle = "rgba(212,168,83,0.08)";
-    ctx.lineWidth = 0.4;
-    for (let j = 1; j < 4; j++) {
-        const lx = gondolaX - gW / 2 + (gW / 4) * j;
-        ctx.beginPath();
-        ctx.moveTo(lx, gondolaY - gH / 2);
-        ctx.lineTo(lx, gondolaY + gH / 2);
-        ctx.stroke();
-    }
-
-    // ─── Cargo Bay ───
-    const cargoX = cx - hullW * 0.03;
-    const cargoY = cy + hullH * 0.48;
-    const cargoW = hullW * 0.2;
-    const cargoH = hullH * 0.14;
-
-    ctx.fillStyle = "rgba(15,22,32,0.5)";
-    ctx.fillRect(cargoX - cargoW / 2, cargoY, cargoW, cargoH);
-    ctx.strokeStyle = "rgba(212,168,83,0.3)";
-    ctx.lineWidth = 0.8;
-    ctx.strokeRect(cargoX - cargoW / 2, cargoY, cargoW, cargoH);
-
-    // Cargo bay drone docks
-    const dockCount = 4;
-    for (let i = 0; i < dockCount; i++) {
-        const dx = cargoX - cargoW / 2 + cargoW * ((i + 0.5) / dockCount);
-        ctx.fillStyle = "rgba(212,168,83,0.1)";
-        ctx.fillRect(dx - 4, cargoY + cargoH - 6, 8, 5);
-        ctx.strokeStyle = "rgba(212,168,83,0.2)";
-        ctx.lineWidth = 0.4;
-        ctx.strokeRect(dx - 4, cargoY + cargoH - 6, 8, 5);
-    }
-
-    // ─── Tail fins (more detailed) ───
-    const tailX = cx - hullRX * 0.92;
-    const finLen = hullW * 0.14;
-
-    [[0, -1], [0, 1]].forEach(([, dir]) => {
-        // Filled fin
-        ctx.fillStyle = "rgba(18,28,40,0.5)";
-        ctx.beginPath();
-        ctx.moveTo(tailX, cy);
-        ctx.lineTo(tailX - finLen * 0.65, cy + dir * finLen * 0.75);
-        ctx.lineTo(tailX - finLen * 0.85, cy + dir * finLen * 0.25);
-        ctx.lineTo(tailX - finLen * 0.3, cy + dir * finLen * -0.05);
-        ctx.closePath();
-        ctx.fill();
-
-        // Outline
-        ctx.strokeStyle = AMBER;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(tailX, cy);
-        ctx.lineTo(tailX - finLen * 0.65, cy + dir * finLen * 0.75);
-        ctx.lineTo(tailX - finLen * 0.85, cy + dir * finLen * 0.25);
-        ctx.lineTo(tailX - finLen * 0.3, cy + dir * finLen * -0.05);
-        ctx.closePath();
-        ctx.stroke();
-
-        // Rib line inside fin
-        ctx.strokeStyle = AMBER_DIM;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(tailX - finLen * 0.15, cy + dir * finLen * 0.05);
-        ctx.lineTo(tailX - finLen * 0.6, cy + dir * finLen * 0.5);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(tailX - finLen * 0.3, cy + dir * finLen * 0.1);
-        ctx.lineTo(tailX - finLen * 0.7, cy + dir * finLen * 0.4);
-        ctx.stroke();
-    });
-
-    // ─── Propulsion nacelles (more detailed) ───
-    const nacelles: [number, number][] = [
-        [cx + hullW * 0.22, cy + hullH * 0.42],
-        [cx - hullW * 0.15, cy + hullH * 0.38],
-        [cx + hullW * 0.37, cy + hullH * 0.28],
-    ];
-
-    nacelles.forEach(([nx, ny], i) => {
-        // Pylon
-        ctx.strokeStyle = AMBER_DIM;
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(nx, cy + hullH * 0.1);
-        ctx.lineTo(nx, ny - 10);
-        ctx.stroke();
-
-        // Nacelle body fill
-        ctx.fillStyle = "rgba(18,26,38,0.6)";
-        ctx.beginPath();
-        ctx.ellipse(nx, ny, 20, 9, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Nacelle outline
-        ctx.strokeStyle = AMBER;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.ellipse(nx, ny, 20, 9, 0, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Inner detail line
-        ctx.strokeStyle = AMBER_DIM;
-        ctx.lineWidth = 0.4;
-        ctx.beginPath();
-        ctx.moveTo(nx - 12, ny); ctx.lineTo(nx + 12, ny);
-        ctx.stroke();
-
-        // Propeller (3-blade, animated)
-        const propAngle = time * 4 + i * 1.5;
-        ctx.save();
-        ctx.translate(nx + 22, ny);
-        for (let b = 0; b < 3; b++) {
-            ctx.save();
-            ctx.rotate(propAngle + (b * Math.PI * 2) / 3);
-            ctx.fillStyle = `rgba(212,168,83,${0.2 + Math.sin(time * 3 + i) * 0.08})`;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, 2, 14, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
-        // Hub
-        ctx.fillStyle = `rgba(212,168,83,0.4)`;
-        ctx.beginPath();
-        ctx.arc(0, 0, 3, 0, Math.PI * 2);
-        ctx.fill();
-        // Prop wash ring
-        ctx.strokeStyle = `rgba(212,168,83,0.1)`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.arc(0, 0, 15, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-    });
-
-    // ─── Drone modules ───
-    const droneBaseY = cargoY + cargoH;
-    const droneCount = 4;
-    for (let i = 0; i < droneCount; i++) {
-        const dx = cargoX - cargoW / 2 + cargoW * ((i + 0.5) / droneCount);
-        const driftY = Math.sin(time * 1.5 + i * 0.8) * 3;
-        const dy = droneBaseY + 14 + driftY;
-
-        // Body fill
-        ctx.fillStyle = `rgba(18,26,38,0.5)`;
-        ctx.fillRect(dx - 7, dy, 14, 10);
-
-        ctx.strokeStyle = `rgba(212,168,83,${0.4 + Math.sin(time + i) * 0.1})`;
-        ctx.lineWidth = 0.8;
-        ctx.strokeRect(dx - 7, dy, 14, 10);
-
-        // Rotors
-        [-9, 9].forEach(rOff => {
-            ctx.strokeStyle = `rgba(212,168,83,0.3)`;
-            ctx.lineWidth = 0.6;
-            ctx.beginPath();
-            ctx.moveTo(dx + rOff - 5, dy - 2);
-            ctx.lineTo(dx + rOff + 5, dy - 2);
-            ctx.stroke();
-            // Rotor dot
-            ctx.fillStyle = "rgba(212,168,83,0.3)";
-            ctx.beginPath();
-            ctx.arc(dx + rOff, dy - 2, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-        });
-
-        // Cable
-        ctx.strokeStyle = `rgba(212,168,83,0.12)`;
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(dx, dy);
-        ctx.lineTo(dx, dy - 10 - driftY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
-
-    // ─── Hull glow highlight ───
-    const glowGrad = ctx.createRadialGradient(cx, cy - hullRY * 0.3, 0, cx, cy, hullRX * 0.8);
-    glowGrad.addColorStop(0, "rgba(212,168,83,0.03)");
-    glowGrad.addColorStop(1, "rgba(212,168,83,0)");
-    ctx.fillStyle = glowGrad;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, hullRX * 0.8, hullRY * 0.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ─── Scan line ───
-    const scanX = cx - hullRX + ((time * 0.12) % 1) * hullW;
-    ctx.strokeStyle = `rgba(245,197,66,0.05)`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(scanX, 0);
-    ctx.lineTo(scanX, h);
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-function drawAnnotations(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
-    ctx.save();
-
-    annotations.forEach((ann, i) => {
-        const ax = ann.x * w;
-        const ay = ann.y * h;
-        const pulse = 0.5 + Math.sin(time * 1.5 + i * 0.7) * 0.2;
-
-        const hullCx = w * 0.5;
-        const hullCy = h * 0.38;
-        const targetX = ann.align === "right" ? ax - 10 : ann.align === "left" ? ax + 10 : ax;
-        const targetY = ay + 24;
-        const endX = hullCx + (ann.x - 0.5) * w * 0.3;
-        const endY = hullCy + (ann.y - 0.5) * h * 0.2;
-
-        ctx.strokeStyle = `rgba(122,133,148,${pulse * 0.3})`;
-        ctx.lineWidth = 0.5;
-        ctx.setLineDash([2, 3]);
-        ctx.beginPath();
-        ctx.moveTo(targetX, targetY);
-        ctx.lineTo(endX, endY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.fillStyle = `rgba(212,168,83,${pulse * 0.4})`;
-        ctx.beginPath();
-        ctx.arc(endX, endY, 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.font = "bold 10px 'JetBrains Mono', monospace";
-        ctx.fillStyle = `rgba(122,133,148,${pulse})`;
-        ctx.textAlign = ann.align === "right" ? "right" : ann.align === "left" ? "left" : "center";
-        ctx.fillText(ann.label, ax, ay);
-
-        if (ann.value) {
-            ctx.fillStyle = `rgba(212,168,83,${pulse + 0.2})`;
-            ctx.font = "bold 13px 'JetBrains Mono', monospace";
-            ctx.fillText(ann.value, ax, ay + 16);
-        }
-    });
-
-    ctx.restore();
-}
-
-function drawDimensionLines(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
-    const cx = w * 0.5;
-    const hullW = w * 0.72;
-    const hullH = h * 0.28;
-    const cy = h * 0.38;
-
-    const pulse = 0.25 + Math.sin(time * 1.5) * 0.1;
-
-    ctx.save();
-    ctx.strokeStyle = `rgba(122,133,148,${pulse})`;
-    ctx.lineWidth = 0.8;
-    ctx.setLineDash([4, 4]);
-
-    const dimY = cy - hullH * 0.72;
-    ctx.beginPath();
-    ctx.moveTo(cx - hullW * 0.48, dimY);
-    ctx.lineTo(cx + hullW * 0.48, dimY);
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-    [cx - hullW * 0.48, cx + hullW * 0.48].forEach(x => {
-        ctx.beginPath(); ctx.moveTo(x, dimY - 6); ctx.lineTo(x, dimY + 6); ctx.stroke();
-    });
-
-    const hDimX = cx + hullW * 0.52;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(hDimX, cy - hullH * 0.48);
-    ctx.lineTo(hDimX, cy + hullH * 0.48);
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-    [cy - hullH * 0.48, cy + hullH * 0.48].forEach(y => {
-        ctx.beginPath(); ctx.moveTo(hDimX - 6, y); ctx.lineTo(hDimX + 6, y); ctx.stroke();
-    });
-
-    ctx.restore();
-}
-
-function drawHotspots(ctx: CanvasRenderingContext2D, w: number, h: number, time: number, activeId: string | null) {
-    hotspots.forEach((hs) => {
-        const x = hs.cx * w;
-        const y = hs.cy * h;
-        const r = hs.radius * Math.min(w, h);
-        const isActive = activeId === hs.id;
-        const pulse = Math.sin(time * 2 + hotspots.indexOf(hs)) * 0.5 + 0.5;
-
-        ctx.save();
-
-        if (!isActive) {
-            ctx.strokeStyle = `rgba(212,168,83,${0.08 + pulse * 0.06})`;
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.arc(x, y, r + pulse * 4, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        // Glow fill
-        if (isActive) {
-            ctx.fillStyle = "rgba(212,168,83,0.06)";
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        ctx.strokeStyle = isActive ? AMBER : `rgba(212,168,83,${0.3 + pulse * 0.15})`;
-        ctx.lineWidth = isActive ? 2 : 1;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = isActive ? AMBER : `rgba(212,168,83,${0.4 + pulse * 0.2})`;
-        ctx.beginPath();
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = `rgba(212,168,83,${isActive ? 0.8 : 0.2})`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x - 5, y); ctx.lineTo(x + 5, y);
-        ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5);
-        ctx.stroke();
-
-        ctx.restore();
-    });
-}
-
-function drawTitle(ctx: CanvasRenderingContext2D, w: number) {
-    ctx.save();
-    ctx.font = "bold 13px 'JetBrains Mono', monospace";
-    ctx.fillStyle = `rgba(122,133,148,0.6)`;
-    ctx.textAlign = "left";
-    ctx.fillText("PROJECT: AETHER — SKY CARRIER DEPLOYMENT SYSTEM V.5", 24, 30);
-
-    ctx.strokeStyle = AMBER_DIM;
-    ctx.lineWidth = 1;
-    const cornerLen = 20;
-
-    ctx.beginPath();
-    ctx.moveTo(10, 10 + cornerLen); ctx.lineTo(10, 10); ctx.lineTo(10 + cornerLen, 10);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(w - 10 - cornerLen, 10); ctx.lineTo(w - 10, 10); ctx.lineTo(w - 10, 10 + cornerLen);
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-/* ─── Info Panel Overlay ─── */
-function InfoPanel({ hotspot, onClose }: { hotspot: HotspotData; onClose: () => void }) {
     return (
-        <div
-            className="absolute z-30 max-w-sm border border-amber/40 bg-deep-space/95 backdrop-blur-sm p-6"
-            style={{
-                left: `${Math.min(Math.max(hotspot.cx * 100, 15), 65)}%`,
-                top: `${Math.min(Math.max(hotspot.cy * 100, 10), 60)}%`,
-            }}
-        >
-            <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-amber rotate-45" />
-                    <span className="text-amber text-xs font-bold tracking-[0.3em] font-mono">{hotspot.label}</span>
-                </div>
-                <button
-                    onClick={onClose}
-                    className="text-cold-steel hover:text-amber transition-colors text-xs font-mono tracking-wider"
-                >
-                    [CLOSE]
-                </button>
-            </div>
-            <p className="text-cold-steel text-sm font-mono leading-relaxed tracking-wide">
-                {hotspot.desc}
-            </p>
-            <div className="mt-3 pt-3 border-t border-border-subtle">
-                <span className="text-[10px] text-cold-steel/60 font-mono tracking-widest">
-                    COMPONENT ID: {hotspot.id.toUpperCase()}-{Math.floor(Math.random() * 9000 + 1000)}
-                </span>
-            </div>
-        </div>
+        <mesh geometry={geo}>
+            <meshPhysicalMaterial
+                color={HULL_COLOR}
+                transparent
+                opacity={0.25}
+                roughness={0.6}
+                metalness={0.2}
+                side={THREE.DoubleSide}
+                depthWrite={false}
+            />
+        </mesh>
     );
 }
 
-/* ─── Main Component ─── */
-export function BlueprintDiagram() {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const animRef = useRef<number>(0);
-    const [activeHotspot, setActiveHotspot] = useState<string | null>(null);
-    const [dims, setDims] = useState({ w: 1200, h: 700 });
-
-    useEffect(() => {
-        const handleResize = () => {
-            if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                setDims({ w: rect.width, h: Math.max(500, rect.width * 0.55) });
-            }
-        };
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
+/* ─── Hull wireframe overlay ─── */
+function HullWireframe() {
+    const geo = useMemo(() => {
+        const shape = new THREE.SphereGeometry(1, 48, 24);
+        shape.scale(3.2, 1, 1);
+        return new THREE.EdgesGeometry(shape, 15);
     }, []);
 
-    const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+    return (
+        <lineSegments geometry={geo}>
+            <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.35} />
+        </lineSegments>
+    );
+}
 
-        const w = dims.w;
-        const h = dims.h;
-
-        for (const hs of hotspots) {
-            const hx = hs.cx * w;
-            const hy = hs.cy * h;
-            const r = hs.radius * Math.min(w, h);
-            const dist = Math.sqrt((mx - hx) ** 2 + (my - hy) ** 2);
-            if (dist < r + 10) {
-                setActiveHotspot(prev => prev === hs.id ? null : hs.id);
-                return;
+/* ─── Panel seam lines ─── */
+function PanelSeams() {
+    const lines = useMemo(() => {
+        const result: THREE.BufferGeometry[] = [];
+        const seams = [-0.7, -0.35, 0, 0.35, 0.7];
+        for (const yNorm of seams) {
+            const points: THREE.Vector3[] = [];
+            for (let t = -1; t <= 1; t += 0.01) {
+                const x = t * 3.2;
+                const rMax = Math.sqrt(Math.max(0, 1 - t * t));
+                if (Math.abs(yNorm) > rMax) continue;
+                const z = Math.sqrt(Math.max(0, rMax * rMax - yNorm * yNorm));
+                points.push(new THREE.Vector3(x, yNorm, z));
             }
+            if (points.length > 2) result.push(new THREE.BufferGeometry().setFromPoints(points));
+            const backPoints = points.map(p => new THREE.Vector3(p.x, p.y, -p.z));
+            if (backPoints.length > 2) result.push(new THREE.BufferGeometry().setFromPoints(backPoints));
         }
-        setActiveHotspot(null);
-    }, [dims]);
-
-    const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-
-        const w = dims.w;
-        const h = dims.h;
-
-        let isOver = false;
-        for (const hs of hotspots) {
-            const hx = hs.cx * w;
-            const hy = hs.cy * h;
-            const r = hs.radius * Math.min(w, h);
-            if (Math.sqrt((mx - hx) ** 2 + (my - hy) ** 2) < r + 10) {
-                isOver = true;
-                break;
-            }
-        }
-        canvas.style.cursor = isOver ? "pointer" : "default";
-    }, [dims]);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        const startTime = performance.now();
-
-        const draw = (now: number) => {
-            const time = (now - startTime) / 1000;
-            const w = dims.w;
-            const h = dims.h;
-
-            ctx.save();
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.scale(2, 2);
-
-            ctx.fillStyle = BG;
-            ctx.fillRect(0, 0, w, h);
-
-            drawGrid(ctx, w, h);
-            drawTitle(ctx, w);
-            drawAirship(ctx, w, h, time);
-            drawDimensionLines(ctx, w, h, time);
-            drawAnnotations(ctx, w, h, time);
-            drawHotspots(ctx, w, h, time, activeHotspot);
-
-            // Bottom info strip
-            ctx.font = "bold 9px 'JetBrains Mono', monospace";
-            ctx.fillStyle = "rgba(122,133,148,0.35)";
-            ctx.textAlign = "left";
-            ctx.fillText("SCALE: 1:2000  |  REV: 5.2.1  |  CLASSIFICATION: UNRESTRICTED", 24, h - 16);
-            ctx.textAlign = "right";
-            ctx.fillText("CLICK HOTSPOTS TO INSPECT COMPONENTS →", w - 24, h - 16);
-
-            // Bottom corners
-            const cornerLen = 20;
-            ctx.strokeStyle = AMBER_DIM;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(10, h - 10 - cornerLen); ctx.lineTo(10, h - 10); ctx.lineTo(10 + cornerLen, h - 10);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(w - 10 - cornerLen, h - 10); ctx.lineTo(w - 10, h - 10); ctx.lineTo(w - 10, h - 10 - cornerLen);
-            ctx.stroke();
-
-            ctx.restore();
-
-            animRef.current = requestAnimationFrame(draw);
-        };
-
-        animRef.current = requestAnimationFrame(draw);
-        return () => cancelAnimationFrame(animRef.current);
-    }, [dims, activeHotspot]);
-
-    const activeHS = activeHotspot ? hotspots.find(h => h.id === activeHotspot) : null;
+        return result;
+    }, []);
 
     return (
-        <div ref={containerRef} className="w-full relative border border-border-subtle overflow-hidden">
-            <canvas
-                ref={canvasRef}
-                width={dims.w * 2}
-                height={dims.h * 2}
-                style={{ width: dims.w, height: dims.h }}
-                onClick={handleCanvasClick}
-                onMouseMove={handleMouseMove}
-                className="block"
-            />
-            {activeHS && (
-                <InfoPanel hotspot={activeHS} onClose={() => setActiveHotspot(null)} />
-            )}
+        <group>
+            {lines.map((geo, i) => (
+                <ThreeLine key={i} geometry={geo}>
+                    <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.15} />
+                </ThreeLine>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Structural ribs ─── */
+function StructuralRibs() {
+    const ribs = useMemo(() => {
+        const positions: number[] = [-2.8, -2.2, -1.5, -0.8, 0, 0.8, 1.5, 2.2, 2.8];
+        return positions.map((x) => ({ x, r: Math.sqrt(Math.max(0, 1 - (x / 3.2) ** 2)) }));
+    }, []);
+
+    return (
+        <group>
+            {ribs.map((rib, i) => (
+                <group key={i}>
+                    <mesh position={[rib.x, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+                        <ringGeometry args={[rib.r * 0.95, rib.r, 32]} />
+                        <meshBasicMaterial color={AMBER_DIM} transparent opacity={0.15} side={THREE.DoubleSide} />
+                    </mesh>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Longitudinal stringers ─── */
+function Stringers() {
+    const lines = useMemo(() => {
+        const result: THREE.BufferGeometry[] = [];
+        const count = 16;
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const points: THREE.Vector3[] = [];
+            for (let t = -1; t <= 1; t += 0.02) {
+                const x = t * 3.2;
+                const r = Math.sqrt(Math.max(0, 1 - t * t));
+                const y = r * Math.cos(angle);
+                const z = r * Math.sin(angle);
+                points.push(new THREE.Vector3(x, y, z));
+            }
+            result.push(new THREE.BufferGeometry().setFromPoints(points));
+        }
+        return result;
+    }, []);
+
+    return (
+        <group>
+            {lines.map((geo, i) => (
+                <ThreeLine key={i} geometry={geo}>
+                    <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.1} />
+                </ThreeLine>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Internal gas cells ─── */
+function GasCells() {
+    const cells = useMemo(() => {
+        const positions: number[] = [-2.0, -1.0, 0, 1.0, 2.0];
+        return positions.map((x) => ({ x, r: Math.sqrt(Math.max(0, 1 - (x / 3.2) ** 2)) * 0.55 }));
+    }, []);
+
+    const matRef = useRef<THREE.MeshBasicMaterial[]>([]);
+
+    useFrame(({ clock }) => {
+        matRef.current.forEach((mat, i) => {
+            if (mat) mat.opacity = 0.04 + Math.sin(clock.elapsedTime * 0.8 + i * 1.2) * 0.02;
+        });
+    });
+
+    return (
+        <group>
+            {cells.map((cell, i) => (
+                <mesh key={i} position={[cell.x, 0, 0]}>
+                    <sphereGeometry args={[cell.r, 16, 12]} />
+                    <meshBasicMaterial
+                        ref={(el: THREE.MeshBasicMaterial | null) => { if (el) matRef.current[i] = el; }}
+                        color={GAS_CELL_COLOR}
+                        transparent
+                        opacity={0.05}
+                        side={THREE.DoubleSide}
+                        depthWrite={false}
+                    />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Gondola ─── */
+function Gondola() {
+    const boxGeo = useMemo(() => {
+        return new THREE.EdgesGeometry(new THREE.BoxGeometry(0.9, 0.3, 0.4, 4, 2, 2), 1);
+    }, []);
+
+    const strutGeo = useMemo(() => {
+        return new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0.42, 0),
+        ]);
+    }, []);
+
+    return (
+        <group position={[0.3, -1.08, 0]}>
+            <mesh>
+                <boxGeometry args={[0.9, 0.3, 0.4]} />
+                <meshPhysicalMaterial color={HULL_COLOR} transparent opacity={0.5} roughness={0.5} metalness={0.3} />
+            </mesh>
+            <lineSegments geometry={boxGeo}>
+                <lineBasicMaterial color={AMBER} transparent opacity={0.6} />
+            </lineSegments>
+            <mesh position={[0, 0.02, 0]}>
+                <boxGeometry args={[0.7, 0.04, 0.42]} />
+                <meshBasicMaterial color={AMBER_BRIGHT} transparent opacity={0.15} />
+            </mesh>
+            {[-0.3, -0.1, 0.1, 0.3].map((x, i) => (
+                <ThreeLine key={i} geometry={strutGeo} position={[x, 0.15, 0]}>
+                    <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.4} />
+                </ThreeLine>
+            ))}
+            <pointLight color={AMBER} intensity={0.5} distance={2.5} position={[0, -0.1, 0]} />
+        </group>
+    );
+}
+
+/* ─── Cargo bay ─── */
+function CargoBay() {
+    const bayGeo = useMemo(() => {
+        return new THREE.EdgesGeometry(new THREE.BoxGeometry(1.2, 0.15, 0.5, 3, 1, 2), 1);
+    }, []);
+
+    return (
+        <group position={[-0.3, -0.85, 0]}>
+            <lineSegments geometry={bayGeo}>
+                <lineBasicMaterial color={AMBER} transparent opacity={0.4} />
+            </lineSegments>
+            <mesh>
+                <boxGeometry args={[1.2, 0.15, 0.5]} />
+                <meshPhysicalMaterial color={HULL_COLOR} transparent opacity={0.25} roughness={0.7} metalness={0.1} />
+            </mesh>
+            {[-0.4, -0.15, 0.1, 0.35].map((x, i) => (
+                <mesh key={i} position={[x, -0.08, 0]}>
+                    <boxGeometry args={[0.12, 0.02, 0.12]} />
+                    <meshBasicMaterial color={AMBER} transparent opacity={0.3} />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Tail fins ─── */
+function TailFins() {
+    const finShape = useMemo(() => {
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0);
+        shape.lineTo(-0.9, 0.55);
+        shape.lineTo(-1.1, 0.15);
+        shape.lineTo(-0.3, -0.05);
+        shape.lineTo(0, 0);
+        return shape;
+    }, []);
+
+    const finGeo = useMemo(() => new THREE.ShapeGeometry(finShape), [finShape]);
+    const finEdge = useMemo(() => new THREE.EdgesGeometry(finGeo, 1), [finGeo]);
+
+    const rotations: [number, number, number][] = [
+        [0, 0, 0],
+        [0, 0, Math.PI],
+        [Math.PI / 2, 0, 0],
+        [-Math.PI / 2, 0, 0],
+    ];
+
+    return (
+        <group position={[-3.0, 0, 0]}>
+            {rotations.map((rot, i) => (
+                <group key={i} rotation={rot}>
+                    <mesh geometry={finGeo}>
+                        <meshPhysicalMaterial color={HULL_COLOR} transparent opacity={0.35} roughness={0.5} metalness={0.2} side={THREE.DoubleSide} />
+                    </mesh>
+                    <lineSegments geometry={finEdge}>
+                        <lineBasicMaterial color={AMBER} transparent opacity={0.5} />
+                    </lineSegments>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Solar panels ─── */
+function SolarPanels() {
+    const panels = useMemo(() => {
+        const result: { x: number; y: number }[] = [];
+        for (let i = -3; i <= 3; i++) {
+            const x = i * 0.65;
+            const rMax = Math.sqrt(Math.max(0, 1 - (x / 3.2) ** 2));
+            result.push({ x, y: rMax * 0.98 });
+        }
+        return result;
+    }, []);
+
+    return (
+        <group>
+            {panels.map((p, i) => (
+                <group key={i} position={[p.x, p.y, 0]}>
+                    <mesh rotation={[0.3, 0, 0]}>
+                        <planeGeometry args={[0.5, 0.35]} />
+                        <meshBasicMaterial color={new THREE.Color(0x2a3a55)} transparent opacity={0.4} side={THREE.DoubleSide} />
+                    </mesh>
+                    <mesh rotation={[0.3, 0, 0]}>
+                        <planeGeometry args={[0.5, 0.35]} />
+                        <meshBasicMaterial color={AMBER_DIM} transparent opacity={0.15} side={THREE.DoubleSide} wireframe />
+                    </mesh>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Propeller nacelles ─── */
+function PropellerNacelles() {
+    const nacelleGeo = useMemo(() => {
+        const cyl = new THREE.CylinderGeometry(0.12, 0.08, 0.5, 8);
+        cyl.rotateZ(Math.PI / 2);
+        return cyl;
+    }, []);
+    const nacelleEdge = useMemo(() => new THREE.EdgesGeometry(nacelleGeo, 1), [nacelleGeo]);
+
+    const pylonGeo = useMemo(() => {
+        return new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0.35, 0),
+        ]);
+    }, []);
+
+    const positions: [number, number, number][] = [
+        [1.5, -0.72, 0.82],
+        [1.5, -0.72, -0.82],
+        [-1.5, -0.52, 0.72],
+        [-1.5, -0.52, -0.72],
+    ];
+
+    return (
+        <group>
+            {positions.map((pos, i) => (
+                <group key={i} position={pos}>
+                    <ThreeLine geometry={pylonGeo}>
+                        <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.4} />
+                    </ThreeLine>
+                    <mesh geometry={nacelleGeo}>
+                        <meshPhysicalMaterial color={HULL_COLOR} transparent opacity={0.4} roughness={0.4} metalness={0.3} />
+                    </mesh>
+                    <lineSegments geometry={nacelleEdge}>
+                        <lineBasicMaterial color={AMBER} transparent opacity={0.4} />
+                    </lineSegments>
+                    <PropellerDisc />
+                    <pointLight color={AMBER} intensity={0.15} distance={1} position={[0.3, 0, 0]} />
+                </group>
+            ))}
+        </group>
+    );
+}
+
+function PropellerDisc() {
+    const ref = useRef<THREE.Group>(null!);
+    useFrame((_, delta) => {
+        if (ref.current) ref.current.rotation.z += delta * 8;
+    });
+
+    return (
+        <group ref={ref} position={[0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            {[0, Math.PI / 3, -Math.PI / 3].map((rot, i) => (
+                <mesh key={i} rotation={[0, 0, rot]}>
+                    <planeGeometry args={[0.03, 0.35]} />
+                    <meshBasicMaterial color={AMBER} transparent opacity={0.3} side={THREE.DoubleSide} />
+                </mesh>
+            ))}
+            <mesh>
+                <sphereGeometry args={[0.025, 8, 8]} />
+                <meshBasicMaterial color={AMBER} transparent opacity={0.5} />
+            </mesh>
+            <mesh>
+                <ringGeometry args={[0.16, 0.18, 24]} />
+                <meshBasicMaterial color={AMBER_DIM} transparent opacity={0.1} side={THREE.DoubleSide} />
+            </mesh>
+        </group>
+    );
+}
+
+/* ─── Drone modules ─── */
+function DroneModules() {
+    const refs = useRef<THREE.Group[]>([]);
+    const drones = useMemo(() => {
+        return [-0.7, -0.45, -0.15, 0.05].map((x) => ({ x }));
+    }, []);
+
+    useFrame(({ clock }) => {
+        refs.current.forEach((ref, i) => {
+            if (ref) {
+                ref.position.y = -1.1 + Math.sin(clock.elapsedTime * 1.5 + i * 0.8) * 0.04;
+            }
+        });
+    });
+
+    return (
+        <group>
+            {drones.map((d, i) => (
+                <group
+                    key={i}
+                    ref={(el: THREE.Group | null) => { if (el) refs.current[i] = el; }}
+                    position={[d.x, -1.1, 0]}
+                >
+                    {/* Drone body */}
+                    <mesh>
+                        <boxGeometry args={[0.14, 0.06, 0.1]} />
+                        <meshPhysicalMaterial color={HULL_COLOR} transparent opacity={0.5} roughness={0.4} metalness={0.3} />
+                    </mesh>
+                    <mesh>
+                        <boxGeometry args={[0.14, 0.06, 0.1]} />
+                        <meshBasicMaterial color={AMBER} transparent opacity={0.3} wireframe />
+                    </mesh>
+                    {/* Rotor arms */}
+                    {[-0.1, 0.1].map((xOff, j) => (
+                        <mesh key={j} position={[xOff, 0.04, 0]}>
+                            <cylinderGeometry args={[0.06, 0.06, 0.003, 16]} />
+                            <meshBasicMaterial color={AMBER} transparent opacity={0.15} side={THREE.DoubleSide} />
+                        </mesh>
+                    ))}
+                    {/* Cable */}
+                    <ThreeLine
+                        geometry={new THREE.BufferGeometry().setFromPoints([
+                            new THREE.Vector3(0, 0.04, 0),
+                            new THREE.Vector3(0, 0.22, 0),
+                        ])}
+                    >
+                        <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.3} />
+                    </ThreeLine>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Dimension lines ─── */
+function DimensionLines() {
+    const matRef = useRef<THREE.LineBasicMaterial>(null!);
+
+    useFrame(({ clock }) => {
+        if (matRef.current) {
+            matRef.current.opacity = 0.2 + Math.sin(clock.elapsedTime * 1.5) * 0.08;
+        }
+    });
+
+    const geos = useMemo(() => {
+        return [
+            [new THREE.Vector3(-3.3, 1.4, 0), new THREE.Vector3(3.3, 1.4, 0)],
+            [new THREE.Vector3(-3.3, 1.3, 0), new THREE.Vector3(-3.3, 1.5, 0)],
+            [new THREE.Vector3(3.3, 1.3, 0), new THREE.Vector3(3.3, 1.5, 0)],
+            [new THREE.Vector3(3.8, -1.1, 0), new THREE.Vector3(3.8, 1.1, 0)],
+            [new THREE.Vector3(3.7, -1.1, 0), new THREE.Vector3(3.9, -1.1, 0)],
+            [new THREE.Vector3(3.7, 1.1, 0), new THREE.Vector3(3.9, 1.1, 0)],
+        ].map(pts => new THREE.BufferGeometry().setFromPoints(pts));
+    }, []);
+
+    const mat = <lineBasicMaterial ref={matRef} color={STEEL} transparent opacity={0.25} />;
+
+    return (
+        <group>
+            {geos.map((geo, i) => (
+                <ThreeLine key={i} geometry={geo}>{mat}</ThreeLine>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Floating particles ─── */
+function AtmosphereParticles() {
+    const count = 200;
+    const ref = useRef<THREE.Points>(null!);
+
+    const positions = useMemo(() => {
+        const arr = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+            arr[i * 3] = (Math.random() - 0.5) * 14;
+            arr[i * 3 + 1] = (Math.random() - 0.5) * 7;
+            arr[i * 3 + 2] = (Math.random() - 0.5) * 7;
+        }
+        return arr;
+    }, []);
+
+    useFrame(({ clock }) => {
+        if (!ref.current) return;
+        const arr = ref.current.geometry.attributes.position.array as Float32Array;
+        for (let i = 0; i < count; i++) {
+            arr[i * 3 + 1] += Math.sin(clock.elapsedTime * 0.4 + i) * 0.0008;
+            arr[i * 3] += 0.0008;
+            if (arr[i * 3] > 7) arr[i * 3] = -7;
+        }
+        ref.current.geometry.attributes.position.needsUpdate = true;
+    });
+
+    return (
+        <points ref={ref}>
+            <bufferGeometry>
+                <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+            </bufferGeometry>
+            <pointsMaterial color={AMBER} size={0.015} transparent opacity={0.3} sizeAttenuation />
+        </points>
+    );
+}
+
+/* ─── Scan beam ─── */
+function ScanBeam() {
+    const ref = useRef<THREE.Mesh>(null!);
+    useFrame(({ clock }) => {
+        if (!ref.current) return;
+        const t = (clock.elapsedTime * 0.25) % 1;
+        ref.current.position.x = -3.5 + t * 7;
+        (ref.current.material as THREE.MeshBasicMaterial).opacity = 0.03 + Math.sin(t * Math.PI) * 0.02;
+    });
+
+    return (
+        <mesh ref={ref}>
+            <planeGeometry args={[0.03, 3.5]} />
+            <meshBasicMaterial color={AMBER_BRIGHT} transparent opacity={0.04} side={THREE.DoubleSide} />
+        </mesh>
+    );
+}
+
+/* ─── Hull glow rim ─── */
+function HullGlow() {
+    const ref = useRef<THREE.Mesh>(null!);
+    useFrame(({ clock }) => {
+        if (!ref.current) return;
+        (ref.current.material as THREE.MeshBasicMaterial).opacity =
+            0.025 + Math.sin(clock.elapsedTime * 0.6) * 0.012;
+    });
+
+    const geo = useMemo(() => {
+        const shape = new THREE.SphereGeometry(1.02, 32, 16);
+        shape.scale(3.2, 1, 1);
+        return shape;
+    }, []);
+
+    return (
+        <mesh ref={ref} geometry={geo}>
+            <meshBasicMaterial color={AMBER} transparent opacity={0.03} side={THREE.BackSide} depthWrite={false} />
+        </mesh>
+    );
+}
+
+/* ─── 3D Annotation labels (HTML overlays, hidden on mobile) ─── */
+function AnnotationLabels() {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();
+        window.addEventListener("resize", check);
+        return () => window.removeEventListener("resize", check);
+    }, []);
+
+    const annotations = [
+        { label: "LENGTH", value: "260 M", pos: [0, 1.7, 0] as [number, number, number] },
+        { label: "MAX PAYLOAD", value: "200 METRIC TONS", pos: [-1.8, -1.4, 0.8] as [number, number, number] },
+        { label: "CRUISE ALTITUDE", value: "3,000 - 6,000 M", pos: [-2.5, 0.8, 0.5] as [number, number, number] },
+        { label: "BUOYANCY GAS", value: "H₂/He HYBRID", pos: [1.5, 0.8, 0.5] as [number, number, number] },
+        { label: "PROPULSION", value: "SOLAR-ELECTRIC HYBRID", pos: [2.2, -0.5, 1.0] as [number, number, number] },
+        { label: "DRONE MODULES", value: "8-12 AUTONOMOUS UNITS", pos: [-0.3, -1.5, 0.5] as [number, number, number] },
+    ];
+
+    if (isMobile) return null;
+
+    return (
+        <group>
+            {annotations.map((ann, i) => (
+                <Html
+                    key={i}
+                    position={ann.pos}
+                    center
+                    distanceFactor={8}
+                    style={{
+                        pointerEvents: "none",
+                        whiteSpace: "nowrap",
+                    }}
+                >
+                    <div className="flex flex-col items-center gap-0.5 opacity-70">
+                        <span
+                            className="font-mono font-bold tracking-[0.2em] uppercase"
+                            style={{ fontSize: "8px", color: "#6b7280" }}
+                        >
+                            {ann.label}
+                        </span>
+                        <span
+                            className="font-mono font-bold tracking-[0.15em]"
+                            style={{ fontSize: "10px", color: "#c48a20" }}
+                        >
+                            {ann.value}
+                        </span>
+                    </div>
+                </Html>
+            ))}
+        </group>
+    );
+}
+
+/* ─── Main airship model composition ─── */
+function BlueprintAirship() {
+    const groupRef = useRef<THREE.Group>(null!);
+
+    useFrame(({ clock }) => {
+        if (!groupRef.current) return;
+        const bob = Math.sin(clock.elapsedTime * 0.5) * 0.03;
+        groupRef.current.position.y = bob;
+    });
+
+    return (
+        <group ref={groupRef} scale={1.0}>
+            <HullEnvelope />
+            <HullWireframe />
+            <HullGlow />
+            <PanelSeams />
+            <StructuralRibs />
+            <Stringers />
+            <GasCells />
+            <SolarPanels />
+            <Gondola />
+            <CargoBay />
+            <TailFins />
+            <PropellerNacelles />
+            <DroneModules />
+            <DimensionLines />
+            <ScanBeam />
+            <AtmosphereParticles />
+            <AnnotationLabels />
+        </group>
+    );
+}
+
+/* ─── Exported component ─── */
+export function BlueprintDiagram() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
+    if (!mounted) {
+        return (
+            <div className="w-full aspect-[4/3] md:aspect-[16/9] bg-deep-slate/20 border border-border-subtle flex items-center justify-center">
+                <p className="text-amber font-mono text-sm tracking-widest animate-pulse">LOADING BLUEPRINT...</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full relative border border-border-subtle overflow-hidden aspect-[4/3] md:aspect-[16/9]">
+            {/* Corner brackets */}
+            <div className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2 border-amber/30 z-10 pointer-events-none" />
+            <div className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 border-amber/30 z-10 pointer-events-none" />
+            <div className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 border-amber/30 z-10 pointer-events-none" />
+            <div className="absolute bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 border-amber/30 z-10 pointer-events-none" />
+
+            {/* Title strip */}
+            <div className="absolute top-3 left-8 z-10 pointer-events-none">
+                <span className="text-[10px] md:text-[11px] tracking-[0.3em] text-cold-steel/60 font-mono font-bold">
+                    PROJECT AETHER — SKY CARRIER V.5
+                </span>
+            </div>
+
+            {/* Bottom info */}
+            <div className="absolute bottom-3 left-8 z-10 pointer-events-none hidden md:block">
+                <span className="text-[9px] tracking-[0.2em] text-cold-steel/40 font-mono">
+                    SCALE: 1:2000 &nbsp;|&nbsp; REV: 5.2.1 &nbsp;|&nbsp; CLASSIFICATION: UNRESTRICTED
+                </span>
+            </div>
+            <div className="absolute bottom-3 right-8 z-10 pointer-events-none hidden md:block">
+                <span className="text-[9px] tracking-[0.2em] text-cold-steel/40 font-mono">
+                    DRAG TO ROTATE · SCROLL TO ZOOM
+                </span>
+            </div>
+
+            {/* Mobile hint */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none md:hidden">
+                <span className="text-[9px] tracking-[0.2em] text-cold-steel/40 font-mono">
+                    DRAG TO ROTATE · PINCH TO ZOOM
+                </span>
+            </div>
+
+            <Canvas
+                camera={{ position: [0, 0.5, 6], fov: 42 }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ background: "transparent" }}
+                dpr={[1, 2]}
+            >
+                <ambientLight intensity={0.25} />
+                <directionalLight position={[5, 3, 5]} intensity={0.5} color={0xffeedd} />
+                <directionalLight position={[-3, -1, -3]} intensity={0.2} color={0x8090b0} />
+
+                <BlueprintAirship />
+
+                <OrbitControls
+                    enablePan={false}
+                    enableZoom={true}
+                    minDistance={3.5}
+                    maxDistance={12}
+                    autoRotate
+                    autoRotateSpeed={0.3}
+                    maxPolarAngle={Math.PI * 0.75}
+                    minPolarAngle={Math.PI * 0.25}
+                />
+            </Canvas>
         </div>
     );
 }
