@@ -85,8 +85,9 @@ function calcTruck(weight: number, distance: number, terrain: TerrainType) {
     const transitDays = distance / 500;
     // Unloading: ~1.5h per truck
     const unloadHours = numTrucks * 1.5;
-    // Permit lead time: oversized/overweight loads need advance permits
-    const permitDays = weight > 50 ? 7 : weight > 25 ? 3 : 1;
+    // Permit lead time: only oversized/overweight loads need advance permits
+    // ≤25T on one truck = routine freight, no special permits
+    const permitDays = weight > 100 ? 7 : weight > 50 ? 5 : weight > 25 ? 2 : 0;
     // Multi-truck convoy coordination
     const coordDays = numTrucks > 3 ? Math.ceil((numTrucks - 3) * 0.5) : 0;
 
