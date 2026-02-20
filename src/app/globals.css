@@ -1,21 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  /* V9: Warm Earth Dark Palette */
-  --color-mist: #c8c2b8;
-  --color-pure-white: #f5f0e8;
+  /* V10: Light Optimistic Palette — healthy future */
+  --color-mist: #6b7280;
+  --color-pure-white: #ffffff;
 
-  /* Warm Earth Core */
-  --color-deep-space: #0C1117;
-  --color-deep-slate: #141B24;
-  --color-cold-steel: #7a8594;
-  --color-titanium: #e8e2d8;
-  --color-border-subtle: #1e2832;
+  /* Light Theme Core */
+  --color-deep-space: #f8f6f2;
+  /* warm off-white background */
+  --color-deep-slate: #f0ece4;
+  /* slightly darker cream for cards */
+  --color-cold-steel: #6b7280;
+  /* muted gray for secondary text */
+  --color-titanium: #1a1a2e;
+  /* dark navy for primary text */
+  --color-border-subtle: #d6d0c4;
+  /* warm light border */
 
   /* Accents */
-  --color-amber: #D4A853;
-  --color-forest-green: #D4A853;
-  /* Map green → amber for warm theme */
+  --color-amber: #c48a20;
+  /* deeper amber for contrast on light */
+  --color-forest-green: #c48a20;
 }
 
 @theme inline {
@@ -75,8 +80,8 @@ h6 {
 .blueprint-grid {
   background-size: 50px 50px;
   background-image:
-    linear-gradient(to right, rgba(212, 168, 83, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(212, 168, 83, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(196, 138, 32, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(196, 138, 32, 0.06) 1px, transparent 1px);
 }
 
 .font-mono {
@@ -91,5 +96,5 @@ html {
 /* Selection */
 ::selection {
   background: var(--color-amber);
-  color: var(--color-deep-space);
+  color: #ffffff;
 }

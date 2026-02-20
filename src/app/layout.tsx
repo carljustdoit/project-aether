@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { LangProvider } from "@/i18n/LangContext";
 
 const chakra = Chakra_Petch({
   variable: "--font-chakra",
@@ -26,11 +27,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${chakra.variable} ${jetbrainsMono.variable} antialiased selection:bg-[#F59E0B] selection:text-[#0F172A]`}
+        className={`${chakra.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        {children}
+        <LangProvider>
+          {children}
+        </LangProvider>
       </body>
     </html>
   );
 }
-

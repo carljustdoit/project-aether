@@ -32,7 +32,7 @@ export function SectionBackground({
                 style={{
                     objectPosition: position,
                     opacity: opacity / 100,
-                    filter: "saturate(0.15) brightness(0.5)",
+                    filter: "saturate(0.15) brightness(1.2) contrast(0.7)",
                 }}
                 sizes="100vw"
                 unoptimized

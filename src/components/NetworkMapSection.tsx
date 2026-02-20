@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import * as THREE from "three";
 import { SectionBackground } from "./SectionBackground";
+import { useLang } from "@/i18n/LangContext";
+import { translations } from "@/i18n/translations";
 
 const Globe = dynamic(() => import("react-globe.gl"), { ssr: false });
 
@@ -313,9 +315,11 @@ export function NetworkMapSection() {
         }
     }, []);
 
+    const { t } = useLang();
+
     if (!isMounted) return (
         <div className="w-full h-[600px] bg-deep-slate/30 animate-pulse flex items-center justify-center">
-            <p className="text-amber font-mono text-sm tracking-widest">INITIALIZING NETWORK...</p>
+            <p className="text-amber font-mono text-sm tracking-widest">{t(translations.networkMap.initializing)}</p>
         </div>
     );
 
@@ -332,12 +336,12 @@ export function NetworkMapSection() {
             <div className="max-w-7xl mx-auto relative z-10 flex flex-col items-center">
 
                 <div className="text-center mb-12 md:mb-16 w-full">
-                    <span className="text-[11px] tracking-[0.4em] text-amber font-bold uppercase font-mono">WHERE ROADS END</span>
+                    <span className="text-[11px] tracking-[0.4em] text-amber font-bold uppercase font-mono">{t(translations.networkMap.overline)}</span>
                     <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter mt-4 mb-6 leading-[0.95]">
-                        The World&apos;s <span className="text-amber">Hardest</span><br className="hidden md:block" /> Routes
+                        {t(translations.networkMap.headline1)} <span className="text-amber">{t(translations.networkMap.headlineAccent)}</span><br className="hidden md:block" /> {t(translations.networkMap.headline2)}
                     </h2>
                     <p className="text-cold-steel font-mono tracking-wide max-w-2xl mx-auto leading-relaxed text-sm md:text-base">
-                        These are the corridors where conventional logistics fail. Every arc represents a real-world infrastructure bottleneck that only buoyant heavy lift can solve.
+                        {t(translations.networkMap.sub)}
                     </p>
                 </div>
 
@@ -346,7 +350,7 @@ export function NetworkMapSection() {
                     {/* Route sidebar */}
                     <div className="w-full lg:w-72 flex-shrink-0 border border-border-subtle bg-deep-space/80 backdrop-blur-sm overflow-auto max-h-[700px]">
                         <div className="px-4 py-3 border-b border-border-subtle">
-                            <span className="text-[10px] text-amber font-bold tracking-[0.3em] uppercase font-mono">CRITICAL CORRIDORS</span>
+                            <span className="text-[10px] text-amber font-bold tracking-[0.3em] uppercase font-mono">{t(translations.networkMap.criticalCorridors)}</span>
                         </div>
                         {CRITICAL_ROUTES.map((route) => (
                             <button
@@ -365,7 +369,7 @@ export function NetworkMapSection() {
                                 <p className="text-[10px] text-cold-steel font-mono leading-relaxed line-clamp-2">{route.desc}</p>
                                 <div className="flex items-center gap-2 mt-1.5">
                                     <div className="w-1.5 h-1.5 bg-amber rotate-45" />
-                                    <span className="text-[10px] text-amber font-bold tracking-wider">{route.payload} PAYLOAD</span>
+                                    <span className="text-[10px] text-amber font-bold tracking-wider">{route.payload} {t(translations.networkMap.payload)}</span>
                                 </div>
                             </button>
                         ))}
@@ -376,20 +380,20 @@ export function NetworkMapSection() {
 
                         {/* Active sortie overlay */}
                         <div className="absolute right-4 top-4 z-20 bg-deep-space/90 backdrop-blur p-3 hidden md:flex flex-col gap-2 font-mono border border-border-subtle">
-                            <div className="text-[9px] text-amber font-bold tracking-[0.2em] uppercase">FLEET STATUS</div>
+                            <div className="text-[9px] text-amber font-bold tracking-[0.2em] uppercase">{t(translations.networkMap.fleetStatus)}</div>
                             <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                <span className="text-[10px] text-titanium tracking-wider">5 CARRIERS ACTIVE</span>
+                                <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
+                                <span className="text-[10px] text-titanium tracking-wider">{t(translations.networkMap.carriersActive)}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-2 h-2 bg-amber rounded-full" />
-                                <span className="text-[10px] text-cold-steel tracking-wider">8 ROUTES MONITORED</span>
+                                <span className="text-[10px] text-cold-steel tracking-wider">{t(translations.networkMap.routesMonitored)}</span>
                             </div>
                         </div>
 
                         <Globe
                             ref={globeEl}
-                            globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+                            globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
                             bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
                             backgroundColor="rgba(0,0,0,0)"
 
