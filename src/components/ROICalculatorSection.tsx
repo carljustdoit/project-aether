@@ -30,7 +30,7 @@ type TerrainType = "FLAT" | "MOUNTAIN" | "WATER";
  * - No infrastructure setup needed
  */
 
-function calcAether(weight: number, distance: number, terrain: TerrainType) {
+function calcAether(weight: number, distance: number, _terrain: TerrainType) {
     // Base cost: $800/ton at 500km, scales with distance but not terrain
     const baseCost = weight * 800;
     const distanceCost = (distance / 500) * weight * 400;
@@ -39,9 +39,21 @@ function calcAether(weight: number, distance: number, terrain: TerrainType) {
     // CO₂: near-zero (solar-electric + buoyant lift), small amount from station-keeping
     const co2 = weight * distance * 0.003;
 
-    // Time: ~100 km/h cruise + 8h load/deploy
-    const flightHours = distance / 100;
-    const totalHours = flightHours + 8;
+    // --- Time model ---
+    // Loading: rigging & cradle assembly scales with weight
+    //   ~1.5h base + 2h per 50 tons (more cargo modules = more rigging)
+    const loadHours = 1.5 + (weight / 50) * 2;
+
+    // Cruise: buoyancy craft are slightly slower under heavier loads
+    //   ~110 km/h light → ~90 km/h at 500T capacity
+    const cruiseSpeed = 110 - (weight / 500) * 20;
+    const cruiseHours = distance / cruiseSpeed;
+
+    // Deployment: drone module coordination scales with weight
+    //   ~1h base + 1h per 50 tons (more drones = more sequencing)
+    const deployHours = 1 + (weight / 50) * 1;
+
+    const totalHours = loadHours + cruiseHours + deployHours;
     const days = totalHours / 24;
 
     return { cost, co2, days, feasible: true, note: "Single sortie, any terrain" };
@@ -66,16 +78,24 @@ function calcTruck(weight: number, distance: number, terrain: TerrainType) {
     // CO₂: ~0.1 kg per ton-km for heavy trucking
     const co2 = weight * distance * 0.1;
 
-    // Time: ~500km/day per convoy, but scheduling and permitting adds days
+    // --- Time model ---
+    // Loading: ~2h per truck to load & secure
+    const loadHours = numTrucks * 2;
+    // Transit: convoy speed ~500km/day on highways
     const transitDays = distance / 500;
-    const logisticsDays = numTrucks > 3 ? 5 : 2; // Multi-convoy scheduling
-    const permitDays = weight > 50 ? 7 : 2; // Heavy load permits
-    const days = transitDays + logisticsDays + permitDays;
+    // Unloading: ~1.5h per truck
+    const unloadHours = numTrucks * 1.5;
+    // Permit lead time: oversized/overweight loads need advance permits
+    const permitDays = weight > 50 ? 7 : weight > 25 ? 3 : 1;
+    // Multi-truck convoy coordination
+    const coordDays = numTrucks > 3 ? Math.ceil((numTrucks - 3) * 0.5) : 0;
+
+    const days = permitDays + (loadHours / 24) + transitDays + (unloadHours / 24) + coordDays;
 
     return { cost, co2, days, feasible: true, note: `${numTrucks} truck${numTrucks > 1 ? "s" : ""} required` };
 }
 
-function calcHeli(weight: number, distance: number, terrain: TerrainType) {
+function calcHeli(weight: number, distance: number, _terrain: TerrainType) {
     // Mi-26 type: max ~20 tons, $22,000/flight hour, 200 km/h
     const maxLift = 20; // tons per sortie
     const numSorties = Math.ceil(weight / maxLift);
@@ -86,9 +106,14 @@ function calcHeli(weight: number, distance: number, terrain: TerrainType) {
     // CO₂: helicopters burn ~1,000 kg/hr of jet fuel → ~3.15 tons CO₂/hr
     const co2 = numSorties * flightHoursPerSortie * 3150;
 
-    // Time: each sortie + turnaround time
-    const hoursPerSortie = flightHoursPerSortie + 4; // 4h refuel/reload
-    const totalHours = numSorties * hoursPerSortie;
+    // --- Time model ---
+    // First sortie: load (1h) + fly to site (one-way) + unload (1h)
+    const firstSortieHours = 1 + (distance / 200) + 1;
+    // Subsequent sorties: return trip (distance/200) + refuel/reload (3h) + fly + unload (1h)
+    const subsequentSortieHours = (distance / 200) + 3 + (distance / 200) + 1;
+    const totalHours = numSorties === 1
+        ? firstSortieHours
+        : firstSortieHours + (numSorties - 1) * subsequentSortieHours;
     const days = totalHours / 24;
 
     return { cost, co2, days, feasible: true, note: `${numSorties} sortie${numSorties > 1 ? "s" : ""} at ${maxLift}T max` };
@@ -106,9 +131,12 @@ function fmtCO2(v: number) {
 }
 
 function fmtTime(days: number) {
-    if (days < 1) return `${Math.round(days * 24)}h`;
-    if (days < 2) return `${Math.round(days * 24)}h`;
-    return `${Math.round(days)}d`;
+    const totalHours = Math.round(days * 24);
+    if (totalHours < 24) return `${totalHours}h`;
+    const d = Math.floor(totalHours / 24);
+    const h = totalHours % 24;
+    if (h === 0) return `${d}d`;
+    return `${d}d ${h}h`;
 }
 
 export function ROICalculatorSection() {
