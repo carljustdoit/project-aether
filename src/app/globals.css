@@ -1,42 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  /* V2: High-Tech Naturalism Palette */
-  --background: #f8fafc;
-  /* Mist */
-  --foreground: #1e293b;
-  /* Deep Slate */
-  --color-surface: #ffffff;
-  /* Cloud White */
-  --color-primary: #1e293b;
-  /* Deep Slate */
-  --color-secondary: #64748b;
-  /* Slate-500 */
-  --color-accent: #166534;
-  /* Forest Green */
-  --color-highlight: #f59e0b;
-  /* Amber Sun */
+  /* V9: Warm Earth Dark Palette */
+  --color-mist: #c8c2b8;
+  --color-pure-white: #f5f0e8;
+
+  /* Warm Earth Core */
+  --color-deep-space: #0C1117;
+  --color-deep-slate: #141B24;
+  --color-cold-steel: #7a8594;
+  --color-titanium: #e8e2d8;
+  --color-border-subtle: #1e2832;
+
+  /* Accents */
+  --color-amber: #D4A853;
+  --color-forest-green: #D4A853;
+  /* Map green → amber for warm theme */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--color-surface);
-  --color-primary: var(--color-primary);
-  --color-secondary: var(--color-secondary);
-  --color-accent: var(--color-accent);
-  --color-highlight: var(--color-highlight);
+  --color-background: var(--color-deep-space);
+  --color-foreground: var(--color-titanium);
 
-  --font-inter: var(--font-inter);
-  --font-archivo: var(--font-archivo);
+  --color-mist: var(--color-mist);
+  --color-pure-white: var(--color-pure-white);
+  --color-deep-space: var(--color-deep-space);
+  --color-deep-slate: var(--color-deep-slate);
+  --color-cold-steel: var(--color-cold-steel);
+  --color-titanium: var(--color-titanium);
+  --color-forest-green: var(--color-forest-green);
+  --color-amber: var(--color-amber);
+
+  --font-chakra: var(--font-chakra);
   --font-jetbrains-mono: var(--font-jetbrains-mono);
+
+  --border-color-default: var(--color-border-subtle);
+}
+
+/* Global Aesthetics */
+* {
+  border-radius: 0 !important;
+  border-color: var(--border-color-default);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), sans-serif;
+  background: var(--color-deep-space);
+  color: var(--color-titanium);
+  font-family: var(--font-jetbrains-mono), monospace;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
@@ -45,9 +57,39 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-archivo), sans-serif;
+  font-family: var(--font-chakra), sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Utility Classes */
+.chamfered {
+  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+}
+
+.chamfered-sm {
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.blueprint-grid {
+  background-size: 50px 50px;
+  background-image:
+    linear-gradient(to right, rgba(212, 168, 83, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 168, 83, 0.04) 1px, transparent 1px);
 }
 
 .font-mono {
   font-family: var(--font-jetbrains-mono), monospace;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection */
+::selection {
+  background: var(--color-amber);
+  color: var(--color-deep-space);
 }
