@@ -12,6 +12,9 @@ const STEEL = new THREE.Color(0x7a8594).multiplyScalar(0.5);
 const HULL_COLOR = new THREE.Color(0x1a2230);
 const GAS_CELL_COLOR = new THREE.Color(0xd4a853);
 
+// Alias "line" to avoid conflict with SVG <line> tag in TypeScript/JSX
+const ThreeLine = "line" as any;
+
 /* ─── Mouse tracker ─── */
 function useMousePosition() {
     const mouse = useRef({ x: 0, y: 0 });
@@ -94,9 +97,9 @@ function PanelSeams() {
     return (
         <group>
             {lines.map((geo, i) => (
-                <line key={i} geometry={geo}>
+                <ThreeLine key={i} geometry={geo}>
                     <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.2} />
-                </line>
+                </ThreeLine>
             ))}
         </group>
     );
@@ -154,9 +157,9 @@ function Stringers() {
     return (
         <group>
             {lines.map((geo, i) => (
-                <line key={i} geometry={geo}>
+                <ThreeLine key={i} geometry={geo}>
                     <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.12} />
-                </line>
+                </ThreeLine>
             ))}
         </group>
     );
@@ -243,9 +246,9 @@ function Gondola() {
             </mesh>
             {/* Struts */}
             {[-0.3, -0.1, 0.1, 0.3].map((x, i) => (
-                <line key={i} geometry={strutGeo} position={[x, 0.15, 0]}>
+                <ThreeLine key={i} geometry={strutGeo} position={[x, 0.15, 0]}>
                     <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.4} />
-                </line>
+                </ThreeLine>
             ))}
             {/* Gondola glow */}
             <pointLight color={AMBER} intensity={0.5} distance={2.5} position={[0, -0.1, 0]} />
@@ -401,9 +404,9 @@ function PropellerNacelles() {
             {positions.map((pos, i) => (
                 <group key={i} position={pos}>
                     {/* Pylon */}
-                    <line geometry={pylonGeo}>
+                    <ThreeLine geometry={pylonGeo}>
                         <lineBasicMaterial color={AMBER_DIM} transparent opacity={0.4} />
-                    </line>
+                    </ThreeLine>
                     {/* Solid nacelle */}
                     <mesh geometry={nacelleGeo}>
                         <meshPhysicalMaterial
@@ -508,7 +511,7 @@ function DimensionLines() {
     return (
         <group>
             {[lengthLine, serif1, serif2, heightLine, hSerif1, hSerif2].map((geo, i) => (
-                <line key={i} geometry={geo}>{mat}</line>
+                <ThreeLine key={i} geometry={geo}>{mat}</ThreeLine>
             ))}
         </group>
     );
