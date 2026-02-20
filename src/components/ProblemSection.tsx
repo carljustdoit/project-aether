@@ -105,9 +105,9 @@ export function ProblemSection() {
                     </div>
 
                     {/* Stats bar */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border border-border-subtle">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-0 border border-border-subtle">
                         {STATS.map((stat, i) => (
-                            <div key={i} className={`p-6 md:p-8 ${i < STATS.length - 1 ? "border-r border-border-subtle" : ""} ${i < 2 ? "border-b md:border-b-0 border-border-subtle" : ""}`}>
+                            <div key={i} className={`p-6 md:p-8 border-border-subtle ${i < STATS.length - 1 ? "sm:border-r" : ""} ${i < 3 ? "border-b" : ""} ${i < 2 ? "md:border-b-0" : "sm:border-b-0"}`}>
                                 <AnimatedCounter target={stat.value} />
                                 <p className="text-[10px] text-cold-steel font-mono tracking-widest uppercase mt-3 leading-relaxed font-bold">
                                     {stat.label}

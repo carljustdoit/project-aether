@@ -23,7 +23,7 @@ export function HeroSection() {
                 </div>
 
                 {/* Main Headline */}
-                <h1 className="text-5xl md:text-7xl lg:text-[7rem] font-black mb-8 tracking-tighter uppercase leading-[0.9]">
+                <h1 className="text-4xl md:text-7xl lg:text-[7rem] font-black mb-8 tracking-tighter uppercase leading-[0.9]">
                     Planetary Heavy<br />
                     Lift <span className="text-amber">Network.</span>
                 </h1>

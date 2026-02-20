@@ -167,8 +167,8 @@ export function InnovationSection() {
                     </div>
 
                     <div className="space-y-16 text-lg text-cold-steel font-mono leading-[1.9] tracking-wide">
-                        <div className="flex gap-8 items-start">
-                            <div className="text-amber font-bold text-4xl font-sans mt-1 opacity-30 w-24 flex-shrink-0 text-right">1930s</div>
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start">
+                            <div className="text-amber font-bold text-3xl md:text-4xl font-sans mt-1 opacity-30 w-full md:w-24 flex-shrink-0 text-left md:text-right">1930s</div>
                             <div>
                                 <p>
                                     Airships filled with <strong className="text-titanium">pure hydrogen</strong> carried passengers across oceans.
@@ -179,8 +179,8 @@ export function InnovationSection() {
                             </div>
                         </div>
 
-                        <div className="flex gap-8 items-start">
-                            <div className="text-amber font-bold text-4xl font-sans mt-1 opacity-30 w-24 flex-shrink-0 text-right">Today</div>
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start">
+                            <div className="text-amber font-bold text-3xl md:text-4xl font-sans mt-1 opacity-30 w-full md:w-24 flex-shrink-0 text-left md:text-right">Today</div>
                             <div>
                                 <p>
                                     We&apos;ve solved both problems. <strong className="text-titanium">Renewable hydrogen combined with helium</strong> in
@@ -191,8 +191,8 @@ export function InnovationSection() {
                             </div>
                         </div>
 
-                        <div className="flex gap-8 items-start">
-                            <div className="text-amber font-bold text-4xl font-sans mt-1 opacity-60 w-24 flex-shrink-0 text-right">Future</div>
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-8 items-start">
+                            <div className="text-amber font-bold text-3xl md:text-4xl font-sans mt-1 opacity-60 w-full md:w-24 flex-shrink-0 text-left md:text-right">Future</div>
                             <div>
                                 <p>
                                     And the biggest breakthrough? <strong className="text-amber">The carrier never needs to land.</strong> It

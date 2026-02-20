@@ -46,18 +46,18 @@ export function HowItWorksSection() {
 
                     <div className="space-y-0">
                         {steps.map((step, idx) => (
-                            <div key={idx} className="flex gap-8 group py-8 border-b border-border-subtle/50 last:border-b-0">
+                            <div key={idx} className="flex flex-col md:flex-row gap-6 md:gap-8 group py-8 border-b border-border-subtle/50 last:border-b-0">
                                 {/* Number */}
                                 <div className="flex-shrink-0 relative">
-                                    <div className="w-14 h-14 border border-amber/30 flex items-center justify-center bg-deep-space group-hover:bg-amber/10 group-hover:border-amber transition-all">
-                                        <span className="text-amber font-black text-lg font-sans">{step.num}</span>
+                                    <div className="w-12 h-12 md:w-14 md:h-14 border border-amber/30 flex items-center justify-center bg-deep-space group-hover:bg-amber/10 group-hover:border-amber transition-all">
+                                        <span className="text-amber font-black text-base md:text-lg font-sans">{step.num}</span>
                                     </div>
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex-1 pt-1">
-                                    <h3 className="text-xl font-black tracking-wider mb-3 group-hover:text-amber transition-colors">{step.title}</h3>
-                                    <p className="text-cold-steel font-mono text-sm leading-[1.8] tracking-wide max-w-2xl">
+                                <div className="flex-1 pt-0 md:pt-1">
+                                    <h3 className="text-lg md:text-xl font-black tracking-wider mb-3 group-hover:text-amber transition-colors">{step.title}</h3>
+                                    <p className="text-cold-steel font-mono text-xs md:text-sm leading-[1.8] tracking-wide max-w-2xl">
                                         {step.desc}
                                     </p>
                                 </div>
